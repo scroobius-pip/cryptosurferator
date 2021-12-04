@@ -1,139 +1,271 @@
-#[derive(Copy, Clone)]
-enum Operator {
+type UnaryOperation<O, T> = (O, T);
+type BinaryOperation<O, T> = (O, T, T);
+type TernaryOperation<O, T> = (O, T, T, T);
+
+enum GenericOperation<U, B> {
+    Unary(U),
+    Binary(B),
+}
+
+enum ListTerminalType {
+    Integer(Box<[i32]>),
+    Float(Box<[f32]>),
+    Index(Box<[usize]>),
+}
+
+enum TerminalType {
+    Integer(i32),
+    Float(f32),
+    Boolean(bool),
+    Index(usize),
+    Parameter(Parameter),
+}
+
+enum Parameter {
+    Market(MarketParamConstant),
+}
+
+enum Operand {
+    Pointer(usize),
+    Terminal(TerminalType),
+    Parameter(Parameter),
+}
+
+//boolean operator that works on two values of the same type
+enum BinaryBoolOperator {
+    Equal,
+    NotEqual,
+    GreaterThan,
+    GreaterThanOrEqual,
+    LessThan,
+    And,
+    Or,
+    Xor,
+}
+
+enum UnaryBoolOperator {
+    Not, //works on any type, negative numbers are false and positive numbers are true
+}
+
+//boolean operator that works on two boolean values
+// enum BinaryBoolOperatorBool {}
+
+//Binary boolean expression that works on two values of the same type with a binary boolean operator
+type BinaryBoolOperation = (BinaryBoolOperator, Operand, Operand);
+//Unary boolean expression that works on a value of the same type with a unary boolean operator
+type UnaryBoolOperation = (UnaryBoolOperator, Operand);
+type BoolOperation = GenericOperation<UnaryBoolOperation, BinaryBoolOperation>;
+//trade operator sell, buy, or nothing
+enum TradeOperator {
+    Buy,
+    Sell,
+    Nothing,
+}
+
+//amount of leverage for futures trading, x1 for normal trading
+enum TradeLeverage {
+    X1,
+    X2,
+    X5,
+}
+
+type MarketIndex = Operand;
+type MarketPrice = Operand;
+type MarketAmount = Operand;
+
+type TradeOperation = (
+    TradeOperator,
+    MarketIndex,
+    MarketPrice,
+    MarketAmount,
+    TradeLeverage,
+);
+
+//market data intervals
+enum MarketDataInterval {
+    Minute1,
+    Minute3,
+    Minute5,
+    Minute15,
+    Minute30,
+    Hour1,
+    Hour2,
+    Hour4,
+    Hour6,
+    Hour8,
+    Hour12,
+    Day1,
+    Day3,
+    Week1,
+    Month1,
+}
+
+//binary constant operators
+enum MarketDataOperator {
+    Volume,
+    TradeCount,
+    Open,
+    High,
+    Low,
+    Close,
+    OrderBookBids,
+    OrderBookAsks,
+}
+
+enum MarketParamConstant {
+    MarketParamVolume,
+    MarketParamTradeCount,
+    MarketParamOpen,
+    MarketParamHigh,
+    MarketParamLow,
+    MarketParamClose,
+    MarketParamOrderBookBids,
+    MarketParamOrderBookAsks,
+}
+
+type MarketDataTimeStart = i32;
+type MarketDataTimeEnd = i32;
+
+type MarketDataOperation = (
+    MarketDataOperator,
+    MarketDataTimeStart,
+    MarketDataTimeEnd,
+    MarketDataInterval,
+);
+
+//Pick operations collapase a list of types into a single type
+enum NumPickOperator {
+    Average,
+    Sum,
+    Max,
+    Min,
+    Med,
+    Std,
+    Index,
+}
+
+type UnaryNumPickOperation = UnaryOperation<NumPickOperator, Operand>;
+type BinaryNumPickOperation = (NumPickOperator, Operand, Operand);
+type NumPickOperation = GenericOperation<UnaryNumPickOperation, BinaryNumPickOperation>;
+
+enum NumOperator {
     Add,
     Subtract,
-    Divide,
     Multiply,
+    Divide,
     Modulo,
-    Print,
+    Min,
+    Max,
+    Sum,
+    Average,
+    Cos,
+    Sin,
+    Tan,
+    Pow,
+    Log,
 }
 
-fn Add(a: f32, b: f32) -> f32 {
-    a + b
+type UnaryNumOperation = UnaryOperation<NumOperator, Operand>;
+type BinaryNumOperation = BinaryOperation<NumOperator, Operand>;
+type NumOperation = GenericOperation<UnaryNumOperation, BinaryNumOperation>;
+// enum NumOperation {
+//     Unary(UnaryNumOperation),
+//     Binary(BinaryNumOperation),
+// }
+
+enum ConstantListOperator {}
+
+enum ConstantOperator {
+    PortfolioMarketValue, //gives the amount of units of a particular currency in a portfolio
+    CurrentMarketPrice,
 }
 
-fn Subtract(a: f32, b: f32) -> f32 {
-    a - b
-}
+type BranchCondition = Operand;
+type TrueBranch = Operand;
+type FalseBranch = Operand;
 
-fn Divide(a: f32, b: f32) -> f32 {
-    a / b
-}
+type BranchOperation = (BranchCondition, TrueBranch, FalseBranch); //if else  statement
 
-fn Multiply(a: f32, b: f32) -> f32 {
-    a * b
-}
-
-fn Modulo(a: f32, b: f32) -> f32 {
-    a % b
-}
-
-fn Print(a: f32, _: f32) -> f32 {
-    println!("{}", a);
-    a
-}
-
-fn getFunctionByOperator(operator: &Operator) -> fn(f32, f32) -> f32 {
-    match operator {
-        Operator::Add => Add,
-        Operator::Subtract => Subtract,
-        Operator::Divide => Divide,
-        Operator::Multiply => Multiply,
-        Operator::Modulo => Modulo,
-        Operator::Print => Print,
-    }
-}
-
-type UnaryOperation = (Operator, Operand);
-type BinaryOperation = (Operator, Operand, Operand);
-
-#[derive(Copy, Clone)]
 enum Operation {
-    Unary(UnaryOperation),
-    Binary(BinaryOperation),
+    Branch(BranchOperation),
+    Bool(BoolOperation),
+    Trade(TradeOperation),
+    MarketData(MarketDataOperation),
+    NumPick(NumPickOperation),
+    Number(NumOperation),
+    MarketPick(BoolOperation), //picks a market index to be used for market data, this is based on the ranking from an arbitrary function
 }
 
 type OperationList = Vec<Operation>;
-
-enum TerminalType {
-    Number(f32),
-    Boolean(bool),
+fn main() {
+    let mut operations: OperationList = vec![
+        Operation::MarketData((
+            MarketDataOperator::Volume,
+            0,
+            0,
+            MarketDataInterval::Minute1,
+        )),
+        Operation::NumPick(NumPickOperation::Unary((
+            NumPickOperator::Average,
+            Operand::Pointer(0),
+        ))),
+        Operation::NumPick(NumPickOperation::Binary((
+            NumPickOperator::Index,
+            Operand::Pointer(0),
+            Operand::Terminal(TerminalType::Index(0)),
+        ))),
+        Operation::Number(NumOperation::Unary((NumOperator::Cos, Operand::Pointer(1)))),
+        Operation::Trade((
+            TradeOperator::Buy,
+            Operand::Terminal(TerminalType::Index(0)),
+            Operand::Pointer(3),
+            Operand::Terminal(TerminalType::Float(1.1)),
+            TradeLeverage::X1,
+        )),
+        Operation::Trade((
+            TradeOperator::Sell,
+            Operand::Terminal(TerminalType::Index(0)),
+            Operand::Pointer(3),
+            Operand::Terminal(TerminalType::Float(1.1)),
+            TradeLeverage::X2,
+        )),
+        Operation::Bool(BoolOperation::Binary((
+            BinaryBoolOperator::LessThan,
+            Operand::Terminal(TerminalType::Integer(100)),
+            Operand::Pointer(1),
+        ))),
+        Operation::NumPick(NumPickOperation::Unary((
+            NumPickOperator::Average,
+            Operand::Parameter(Parameter::Market(MarketParamConstant::MarketParamHigh)),
+        ))),
+        Operation::MarketPick(BoolOperation::Binary((
+            BinaryBoolOperator::GreaterThan,
+            Operand::Pointer(8),
+            Operand::Pointer(8),
+        ))),
+        Operation::Branch((
+            Operand::Pointer(6),
+            Operand::Pointer(5),
+            Operand::Pointer(2),
+        )),
+    ];
 }
-#[derive(Copy, Clone)]
-enum Operand {
-    // Pointer is an index that refers to an operation in an operation list
-    Pointer(usize),
-    Terminal(f32),
-}
 
-fn evaluateOperation(operation: &Operation, operation_list: &OperationList) -> f32 {
+fn evaluate_operation(operation: &Operation, operation_list: &OperationList) {
     match operation {
-        Operation::Unary(operation) => {
-            let operand = operation.1;
-            let operator = &operation.0;
-            match operand {
-                Operand::Pointer(operation) => {
-                    let operation = &operation_list[operation];
-                    getFunctionByOperator(operator)(
-                        evaluateOperation(operation, operation_list),
-                        0.0,
-                    )
-                }
-                Operand::Terminal(terminal) => getFunctionByOperator(operator)(terminal, 0.0),
-            }
-        }
-        Operation::Binary(operation) => {
-            let operator = &operation.0;
-            let left_operand = operation.1;
-            let right_operand = operation.2;
-            match left_operand {
-                Operand::Pointer(operation) => {
-                    let operation = &operation_list[operation];
-                    let left_operand = evaluateOperation(operation, operation_list);
-                    match right_operand {
-                        Operand::Pointer(operation) => {
-                            let operation = &operation_list[operation];
-                            let right_operand = evaluateOperation(operation, operation_list);
-                            getFunctionByOperator(&operator)(left_operand, right_operand)
-                        }
-                        Operand::Terminal(terminal) => {
-                            getFunctionByOperator(&operator)(left_operand, terminal)
-                        }
-                    }
-                }
-                Operand::Terminal(terminal) => match right_operand {
-                    Operand::Pointer(operation) => {
-                        let operation = &operation_list[operation];
-                        let right_operand = evaluateOperation(operation, operation_list);
-                        getFunctionByOperator(&operator)(terminal, right_operand)
-                    }
-                    Operand::Terminal(right_terminal) => {
-                        getFunctionByOperator(&operator)(terminal, right_terminal)
+        Operation::MarketPick(boolOperation) => match boolOperation {
+            GenericOperation::Binary((operator, operand1, operand2)) => match operand1 {
+                Operand::Parameter(parameter) => match parameter {
+                    Parameter::Market(market_param_constant) => {
+                        let constant = vec![];
+                        
                     }
                 },
-            }
-        }
-    }
-}
-
-fn main() {
-    // let print_operation: Operation =
-    let operation_list: OperationList = vec![
-        Operation::Binary((
-            Operator::Multiply,
-            Operand::Terminal(10 as f32),
-            Operand::Terminal(10 as f32),
-        )),
-        Operation::Binary((
-            Operator::Subtract,
-            Operand::Pointer(0),
-            Operand::Terminal(2 as f32),
-        )),
-        Operation::Binary((Operator::Divide, Operand::Pointer(1), Operand::Pointer(0))),
-        Operation::Unary((Operator::Print, Operand::Pointer(2))),
-    ];
-    for operation in &operation_list {
-        evaluateOperation(&operation, &operation_list);
-        // println!("{:?}", operation);
+                Operand::Pointer(operation) => {}
+                Operand::Terminal(terminal) => {}
+            },
+            GenericOperation::Unary((operator, operand1)) => {}
+        },
+        _ => {}
     }
 }
