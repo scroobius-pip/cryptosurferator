@@ -1,38 +1,28 @@
-type UnaryOperation<O, T> = (O, T);
-type BinaryOperation<O, T> = (O, T, T);
-type TernaryOperation<O, T> = (O, T, T, T);
-
-enum GenericOperation<U, B> {
-    Unary(U),
-    Binary(B),
-}
-
-enum ListTerminalType {
-    Integer(Box<[i32]>),
-    Float(Box<[f32]>),
-    Index(Box<[usize]>),
-}
-
 enum TerminalType {
-    Integer(i32),
-    Float(f32),
-    Boolean(bool),
-    Index(usize),
-    Parameter(Parameter),
+    Number(f32),
+    NumberList(Box<[f32]>),
 }
 
-enum Parameter {
-    Market(MarketParamConstant),
+enum ConstantType {
+    Number(f32),
+    NumberList(Box<[f32]>),
 }
+
+enum ConstantOperator {
+    PortfolioValue,
+    CurrentMarketPrice,
+}
+
+type ConstantOperation = (ConstantOperator, Operand);
 
 enum Operand {
     Pointer(usize),
     Terminal(TerminalType),
-    Parameter(Parameter),
+    None,
 }
 
 //boolean operator that works on two values of the same type
-enum BinaryBoolOperator {
+enum BoolOperator {
     Equal,
     NotEqual,
     GreaterThan,
@@ -41,20 +31,19 @@ enum BinaryBoolOperator {
     And,
     Or,
     Xor,
-}
-
-enum UnaryBoolOperator {
-    Not, //works on any type, negative numbers are false and positive numbers are true
+    Identity,
+    Not,
 }
 
 //boolean operator that works on two boolean values
 // enum BinaryBoolOperatorBool {}
 
 //Binary boolean expression that works on two values of the same type with a binary boolean operator
-type BinaryBoolOperation = (BinaryBoolOperator, Operand, Operand);
+type BoolOperation = (BoolOperator, Operand, Operand);
 //Unary boolean expression that works on a value of the same type with a unary boolean operator
-type UnaryBoolOperation = (UnaryBoolOperator, Operand);
-type BoolOperation = GenericOperation<UnaryBoolOperation, BinaryBoolOperation>;
+
+type MarketBoolOperation = (BoolOperator, Operand, Operand);
+
 //trade operator sell, buy, or nothing
 enum TradeOperator {
     Buy,
@@ -100,6 +89,11 @@ enum MarketDataInterval {
     Month1,
 }
 
+enum ConstantOperator {
+    PortfolioMarketValue, //gives the amount of units of a particular currency in a portfolio
+    CurrentMarketPrice,
+}
+
 //binary constant operators
 enum MarketDataOperator {
     Volume,
@@ -112,24 +106,14 @@ enum MarketDataOperator {
     OrderBookAsks,
 }
 
-enum MarketParamConstant {
-    MarketParamVolume,
-    MarketParamTradeCount,
-    MarketParamOpen,
-    MarketParamHigh,
-    MarketParamLow,
-    MarketParamClose,
-    MarketParamOrderBookBids,
-    MarketParamOrderBookAsks,
-}
-
-type MarketDataTimeStart = i32;
-type MarketDataTimeEnd = i32;
-
+type MarketDataIndexStart = Operand;
+type MarketDataIndexStop = Operand;
+//Operation
 type MarketDataOperation = (
     MarketDataOperator,
-    MarketDataTimeStart,
-    MarketDataTimeEnd,
+    MarketIndex,
+    MarketDataIndexStart,
+    MarketDataIndexStop,
     MarketDataInterval,
 );
 
@@ -142,11 +126,10 @@ enum NumPickOperator {
     Med,
     Std,
     Index,
+    Length,
 }
 
-type UnaryNumPickOperation = UnaryOperation<NumPickOperator, Operand>;
-type BinaryNumPickOperation = (NumPickOperator, Operand, Operand);
-type NumPickOperation = GenericOperation<UnaryNumPickOperation, BinaryNumPickOperation>;
+type NumPickOperation = (NumPickOperator, Operand, Operand);
 
 enum NumOperator {
     Add,
@@ -157,7 +140,6 @@ enum NumOperator {
     Min,
     Max,
     Sum,
-    Average,
     Cos,
     Sin,
     Tan,
@@ -165,26 +147,9 @@ enum NumOperator {
     Log,
 }
 
-type UnaryNumOperation = UnaryOperation<NumOperator, Operand>;
-type BinaryNumOperation = BinaryOperation<NumOperator, Operand>;
-type NumOperation = GenericOperation<UnaryNumOperation, BinaryNumOperation>;
-// enum NumOperation {
-//     Unary(UnaryNumOperation),
-//     Binary(BinaryNumOperation),
-// }
+type NumOperation = (NumOperator, Operand, Operand);
 
-enum ConstantListOperator {}
-
-enum ConstantOperator {
-    PortfolioMarketValue, //gives the amount of units of a particular currency in a portfolio
-    CurrentMarketPrice,
-}
-
-type BranchCondition = Operand;
-type TrueBranch = Operand;
-type FalseBranch = Operand;
-
-type BranchOperation = (BranchCondition, TrueBranch, FalseBranch); //if else  statement
+type BranchOperation = (Operand, Operand, Operand); //if else  statement
 
 enum Operation {
     Branch(BranchOperation),
@@ -193,7 +158,8 @@ enum Operation {
     MarketData(MarketDataOperation),
     NumPick(NumPickOperation),
     Number(NumOperation),
-    MarketPick(BoolOperation), //picks a market index to be used for market data, this is based on the ranking from an arbitrary function
+    Constant(ConstantOperation),
+    MarketPick(MarketBoolOperation), //picks a market index to be used for market data, this is based on the ranking from an arbitrary function
 }
 
 type OperationList = Vec<Operation>;
@@ -201,48 +167,53 @@ fn main() {
     let mut operations: OperationList = vec![
         Operation::MarketData((
             MarketDataOperator::Volume,
-            0,
-            0,
+            Operand::Terminal(TerminalType::Number(1.0)),
+            Operand::Terminal(TerminalType::Number(1.0)),
+            Operand::Terminal(TerminalType::Number(1.0)),
             MarketDataInterval::Minute1,
         )),
-        Operation::NumPick(NumPickOperation::Unary((
-            NumPickOperator::Average,
-            Operand::Pointer(0),
-        ))),
-        Operation::NumPick(NumPickOperation::Binary((
-            NumPickOperator::Index,
-            Operand::Pointer(0),
-            Operand::Terminal(TerminalType::Index(0)),
-        ))),
-        Operation::Number(NumOperation::Unary((NumOperator::Cos, Operand::Pointer(1)))),
+        Operation::NumPick((NumPickOperator::Average, Operand::Pointer(0), Operand::None)),
+        Operation::Number((
+            NumOperator::Cos,
+            Operand::Terminal(TerminalType::Number(0.0)),
+            Operand::None,
+        )),
+        Operation::NumPick((NumPickOperator::Index, Operand::Pointer(2), Operand::None)),
+        Operation::Number((
+            NumOperator::Add,
+            Operand::Pointer(2),
+            Operand::Terminal(TerminalType::Number(0.0)),
+        )),
         Operation::Trade((
             TradeOperator::Buy,
-            Operand::Terminal(TerminalType::Index(0)),
+            Operand::Terminal(TerminalType::Number(0.0)),
             Operand::Pointer(3),
-            Operand::Terminal(TerminalType::Float(1.1)),
+            Operand::Terminal(TerminalType::Number(1.1)),
             TradeLeverage::X1,
+        )),
+        Operation::Bool((
+            BoolOperator::GreaterThan,
+            Operand::Terminal(TerminalType::Number(0.2)),
+            Operand::Pointer(1),
+        )),
+        Operation::Constant((ConstantOperator::PortfolioValue, Operand::None)),
+        Operation::Bool((
+            BoolOperator::GreaterThan,
+            Operand::Terminal(TerminalType::Number(0.2)),
+            Operand::Pointer(1),
+        )),
+        Operation::Branch((
+            Operand::Pointer(3),
+            Operand::Terminal(TerminalType::Number(1.0)),
+            Operand::Terminal(TerminalType::Number(0.0)),
         )),
         Operation::Trade((
             TradeOperator::Sell,
-            Operand::Terminal(TerminalType::Index(0)),
+            Operand::Terminal(TerminalType::Number(0.0)),
             Operand::Pointer(3),
-            Operand::Terminal(TerminalType::Float(1.1)),
+            Operand::Terminal(TerminalType::Number(1.1)),
             TradeLeverage::X2,
         )),
-        Operation::Bool(BoolOperation::Binary((
-            BinaryBoolOperator::LessThan,
-            Operand::Terminal(TerminalType::Integer(100)),
-            Operand::Pointer(1),
-        ))),
-        Operation::NumPick(NumPickOperation::Unary((
-            NumPickOperator::Average,
-            Operand::Parameter(Parameter::Market(MarketParamConstant::MarketParamHigh)),
-        ))),
-        Operation::MarketPick(BoolOperation::Binary((
-            BinaryBoolOperator::GreaterThan,
-            Operand::Pointer(8),
-            Operand::Pointer(8),
-        ))),
         Operation::Branch((
             Operand::Pointer(6),
             Operand::Pointer(5),
@@ -251,21 +222,114 @@ fn main() {
     ];
 }
 
-fn evaluate_operation(operation: &Operation, operation_list: &OperationList) {
+
+fn evaluate_operation(operation: Operation, state: &mut State) -> f64 {
     match operation {
-        Operation::MarketPick(boolOperation) => match boolOperation {
-            GenericOperation::Binary((operator, operand1, operand2)) => match operand1 {
-                Operand::Parameter(parameter) => match parameter {
-                    Parameter::Market(market_param_constant) => {
-                        let constant = vec![];
-                        
-                    }
-                },
-                Operand::Pointer(operation) => {}
-                Operand::Terminal(terminal) => {}
-            },
-            GenericOperation::Unary((operator, operand1)) => {}
-        },
-        _ => {}
+        Operation::Branch((operator,operand_left,operand_right)) => {
+            let condition = evaluate_operation(operation.0, state);
+            if condition > 0.0 {
+                evaluate_operation(operation.1, state)
+            } else {
+                evaluate_operation(operation.2, state)
+            }
+        }
+        Operation::Bool(operation) => {
+            let left = evaluate_operation(operation.1, state);
+            let right = evaluate_operation(operation.2, state);
+            match operation.0 {
+                BoolOperator::Equal => left == right,
+                BoolOperator::NotEqual => left != right,
+                BoolOperator::GreaterThan => left > right,
+                BoolOperator::GreaterThanOrEqual => left >= right,
+                BoolOperator::LessThan => left < right,
+                BoolOperator::And => left > 0.0 && right > 0.0,
+                BoolOperator::Or => left > 0.0 || right > 0.0,
+                BoolOperator::Xor => left > 0.0 ^ right > 0.0,
+                BoolOperator::Identity => left == right,
+                BoolOperator::Not => left == 0.0,
+            }
+        }
+        Operation::Trade(operation) => {
+            let market_index = evaluate_operation(operation.1, state);
+            let price = evaluate_operation(operation.2, state);
+            let amount = evaluate_operation(operation.3, state);
+            let leverage = match operation.4 {
+                TradeLeverage::X1 => 1.0,
+                TradeLeverage::X2 => 2.0,
+                TradeLeverage::X3 => 3.0,
+                TradeLeverage::X4 => 4.0,
+                TradeLeverage::X5 => 5.0,
+            };
+            match operation.0 {
+                TradeOperator::Buy => state.buy(market_index, price, amount, leverage),
+                TradeOperator::Sell => state.sell(market_index, price, amount, leverage),
+            }
+        }
+        Operation::MarketData(operation) => {
+            let market_index = evaluate_operation(operation.1, state);
+            let start = evaluate_operation(operation.2, state);
+            let stop = evaluate_operation(operation.3, state);
+            let interval = match operation.4 {
+                MarketDataInterval::Minute1 => 1,
+                MarketDataInterval::Minute5 => 5,
+                MarketDataInterval::Minute15 => 15,
+                MarketDataInterval::Minute30 => 30,
+                MarketDataInterval::Hour1 => 60,
+                MarketDataInterval::Hour4 => 240,
+                MarketDataInterval::Day1 => 1440,
+                MarketDataInterval::Week1 => 10080,
+                MarketDataInterval::Month1 => 43800,
+            };
+            match operation.0 {
+                MarketDataOperator::Volume => state.market_data.volume(market_index, start, stop, interval),
+                MarketDataOperator::TradeCount => state.market_data.trade_count(market_index, start, stop, interval),
+                MarketDataOperator::Open => state.market_data.open(market_index, start, stop, interval),
+                MarketDataOperator::High => state.market_data.high(market_index, start, stop, interval),
+                MarketDataOperator::Low => state.market_data.low(market_index, start, stop, interval),
+                MarketDataOperator::Close => state.market_data.close(market_index, start, stop, interval),
+                MarketDataOperator::OrderBookBids => state.market_data.order_book_bids(market_index, start, stop, interval),
+                MarketDataOperator::OrderBookAsks => state.market_data.order_book_asks(market_index, start, stop, interval),
+            }
+        }
+        Operation::Num(operation) => {
+            let left = evaluate_operation(operation.1, state);
+            let right = evaluate_operation(operation.2, state);
+            match operation.0 {
+                NumOperator::Add => left + right,
+                NumOperator::Subtract => left - right,
+                NumOperator::Multiply => left * right,
+                NumOperator::Divide => left / right,
+                NumOperator::Modulo => left % right,
+                NumOperator::Power => left.powf(right),
+                NumOperator::Abs => left.abs(),
+                NumOperator::Cos => left.cos(),
+                NumOperator::Sin => left.sin(),
+                NumOperator::Tan => left.tan(),
+                NumOperator::Cot => left.tan().recip(),
+                NumOperator::Sqrt => left.sqrt(),
+                NumOperator::Log => left.ln(),
+                NumOperator::Log10 => left.log10(),
+                NumOperator::Exp => left.exp(),
+                NumOperator::Floor => left.floor(),
+                NumOperator::Ceil => left.ceil(),
+                NumOperator::Round => left.round(),
+                NumOperator::Truncate => left.trunc(),
+                NumOperator::Min => left.min(right),
+                NumOperator::Max => left.max(right),
+                NumOperator::Average => (left + right) / 2.0,
+                NumOperator::Index => left.powf(right),
+            }
+        }
+        Operation::Pointer(operation) => {
+            let index = evaluate_operation(operation, state);
+            state.stack[index as usize]
+        }
+        Operation::Terminal(operation) => {
+            match operation {
+                TerminalType::Number(number) => number,
+            
+            }
+        }
     }
 }
+
