@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-
+#[derive(Clone)]
 enum TerminalType {
     Number(f32),
     NumberList(Vec<f32>),
@@ -16,6 +16,12 @@ impl TerminalType {
         match self {
             TerminalType::Number(n) => *n > 0.0,
             TerminalType::NumberList(n) => n.len() > 0,
+        }
+    }
+    fn to_list(&self) -> Vec<f32> {
+        match self {
+            TerminalType::Number(n) => vec![*n as f32],
+            TerminalType::NumberList(n) => n.clone(),
         }
     }
 }
@@ -48,7 +54,7 @@ enum ConstantType {
 
 enum ConstantOperator {
     PortfolioValue,
-    CurrentMarketPrice,
+    CurrentMarketPrice, //operand is the index of market
 }
 
 type ConstantOperation = (ConstantOperator, Operand);
@@ -57,6 +63,16 @@ enum Operand {
     Pointer(usize),
     Terminal(TerminalType),
     None,
+}
+
+impl Operand {
+    fn evaluate(&self, operation_list: &OperationList, trade_list: &mut TradeList) -> TerminalType {
+        match self {
+            Operand::Pointer(pointer) => evaluate_pointer(pointer, operation_list, trade_list),
+            Operand::Terminal(terminal) => terminal.clone(),
+            Operand::None => TerminalType::Number(0.0),
+        }
+    }
 }
 
 //boolean operator that works on two values of the same type
@@ -83,6 +99,8 @@ type BoolOperation = (BoolOperator, Operand, Operand);
 type MarketBoolOperation = (BoolOperator, Operand, Operand);
 
 //trade operator sell, buy, or nothing
+
+#[derive(Copy, Clone)]
 enum TradeOperator {
     Buy,
     Sell,
@@ -90,6 +108,7 @@ enum TradeOperator {
 }
 
 //amount of leverage for futures trading, x1 for normal trading
+#[derive(Copy, Clone)]
 enum TradeLeverage {
     X1,
     X2,
@@ -108,7 +127,18 @@ type TradeOperation = (
     TradeLeverage,
 );
 
+struct Trade {
+    operator: TradeOperator,
+    index: usize,
+    price: f32,
+    amount: f32,
+    leverage: TradeLeverage,
+}
+
+type TradeList = Vec<Trade>;
+
 //market data intervals
+#[derive(Copy, Clone)]
 enum MarketDataInterval {
     Minute1,
     Minute3,
@@ -171,7 +201,6 @@ enum NumOperator {
     Modulo,
     Min,
     Max,
-    Sum,
     Cos,
     Sin,
     Tan,
@@ -198,28 +227,24 @@ enum Operation {
 }
 
 type OperationList = Vec<Operation>;
+
 fn main() {
     let mut operations: OperationList = vec![];
+    let mut trade_list: TradeList = vec![];
+    evaluate_operation(
+        &operations[operations.len() - 1],
+        &operations,
+        &mut trade_list,
+    );
 }
 
-fn evaluate_pointer(pointer: &usize, operation_list: &OperationList) -> TerminalType {
+fn evaluate_pointer(
+    pointer: &usize,
+    operation_list: &OperationList,
+    trade_list: &mut TradeList,
+) -> TerminalType {
     let operation = &operation_list[*pointer];
-    evaluate_operation(operation, operation_list)
-}
-
-fn evaluate_terminal(terminal: &TerminalType) -> TerminalType {
-    match terminal {
-        TerminalType::Number(number) => TerminalType::Number(*number),
-        TerminalType::NumberList(list) => TerminalType::NumberList(*list),
-    }
-}
-
-fn evaluate_operand(operand: &Operand, operation_list: &OperationList) -> TerminalType {
-    match operand {
-        Operand::Pointer(pointer) => evaluate_pointer(pointer, operation_list),
-        Operand::Terminal(terminal) => *terminal,
-        Operand::None => TerminalType::Number(0.0),
-    }
+    evaluate_operation(operation, operation_list, trade_list)
 }
 
 fn getFunctionByNumPickOperator(operator: &NumPickOperator) -> fn(Vec<f32>) -> f32 {
@@ -273,33 +298,85 @@ fn evaluate_branch_terminal(
     operand_left: &Operand,
     operand_right: &Operand,
     operation_list: &OperationList,
+    trade_list: &mut TradeList,
 ) -> TerminalType {
     let terminal_value = terminal.to_bool();
 
     if terminal_value {
-        evaluate_operand(operand_left, operation_list)
+        operand_left.evaluate(operation_list, trade_list)
     } else {
-        evaluate_operand(operand_right, operation_list)
+        operand_right.evaluate(operation_list, trade_list)
     }
 }
 
-fn evaluate_operation(operation: &Operation, operation_list: &OperationList) -> TerminalType {
-    match operation {
+fn get_number_operator(operator: &NumOperator) -> fn(f32, f32) -> f32 {
+    match operator {
+        NumOperator::Add => |a, b| a + b,
+        NumOperator::Subtract => |a, b| a - b,
+        NumOperator::Multiply => |a, b| a * b,
+        NumOperator::Divide => |a, b| a / b,
+        NumOperator::Modulo => |a, b| a % b,
+        NumOperator::Min => |a, b| a.min(b),
+        NumOperator::Max => |a, b| a.max(b),
+        NumOperator::Cos => |a, _| a.cos(),
+        NumOperator::Sin => |a, _| a.sin(),
+        NumOperator::Tan => |a, _| a.tan(),
+        NumOperator::Pow => |a, b| a.powf(b),
+        NumOperator::Log => |a, b| a.log(b),
+    }
+}
 
-        
+fn evaluate_operation(
+    operation: &Operation,
+    operation_list: &OperationList,
+    trade_list: &mut TradeList,
+) -> TerminalType {
+    match operation {
+        Operation::Index((operand_left, operand_right)) => {
+            let index = operand_left.evaluate(operation_list, trade_list).to_f32();
+            let list = operand_right.evaluate(operation_list, trade_list).to_list();
+            TerminalType::Number(list[index as usize])
+        }
+
+        Operation::MarketPick((operator, operand_left, operand_right)) => {
+            let left_value = operand_left.evaluate(operation_list, trade_list);
+            let right_value = operand_right.evaluate(operation_list, trade_list);
+            let market_values: Vec<Vec<f32>> = vec![vec![3.0, 4.0, 5.0], vec![6.0, 7.0, 8.0]];
+            TerminalType::NumberList(vec![0.0])
+        }
+        Operation::Constant((operator, operand)) => {
+            let market_index = operand.evaluate(operation_list, trade_list);
+            match operator {
+                ConstantOperator::CurrentMarketPrice => TerminalType::Number(0.0),
+                ConstantOperator::PortfolioValue => TerminalType::Number(0.0),
+            }
+        }
+
+        Operation::Number((operator, operand_left, operand_right)) => {
+            let left = operand_left.evaluate(operation_list, trade_list);
+            let right = operand_right.evaluate(operation_list, trade_list);
+            let operator_function = get_number_operator(operator);
+            TerminalType::Number(operator_function(left.to_f32(), right.to_f32()))
+        }
 
         Operation::Trade((operator, market_index, market_price, market_amount, trade_leverage)) => {
-            let market_index = evaluate_operand(market_index, operation_list).to_f32() as usize;
-            let market_price = evaluate_operand(market_price, operation_list).to_f32();
-            let market_amount = evaluate_operand(market_amount, operation_list).to_f32();
-            // let trade_leverage = evaluate_operand(trade_leverage, operation_list);
+            let market_index = market_index.evaluate(operation_list, trade_list).to_f32() as usize;
+            let market_price = market_price.evaluate(operation_list, trade_list).to_f32();
+            let market_amount = market_amount.evaluate(operation_list, trade_list).to_f32();
 
+            trade_list.push(Trade {
+                operator: *operator,
+                index: market_index,
+                price: market_price,
+                amount: market_amount,
+                leverage: *trade_leverage,
+            });
 
-            TerminalType::Number(0.0)
+            TerminalType::Number(market_index as f32)
         }
         Operation::Bool((operator, operand_left, operand_right)) => {
-            let left_value = evaluate_operand(operand_left, operation_list);
-            let right_value = evaluate_operand(operand_right, operation_list);
+            let left_value = operand_left.evaluate(operation_list, trade_list);
+            let right_value = operand_right.evaluate(operation_list, trade_list);
 
             match operator {
                 BoolOperator::Equal => {
@@ -337,17 +414,22 @@ fn evaluate_operation(operation: &Operation, operation_list: &OperationList) -> 
             match operand_operator {
                 Operand::Pointer(pointer) => {
                     let operand_operator_value =
-                        evaluate_operation(&operation_list[*pointer], operation_list);
+                        evaluate_operation(&operation_list[*pointer], operation_list, trade_list);
                     evaluate_branch_terminal(
                         &operand_operator_value,
                         operand_left,
                         operand_right,
                         operation_list,
+                        trade_list,
                     )
                 }
-                Operand::Terminal(terminal) => {
-                    evaluate_branch_terminal(terminal, operand_left, operand_right, operation_list)
-                }
+                Operand::Terminal(terminal) => evaluate_branch_terminal(
+                    terminal,
+                    operand_left,
+                    operand_right,
+                    operation_list,
+                    trade_list,
+                ),
                 Operand::None => TerminalType::Number(0.0),
             }
         }
@@ -358,9 +440,11 @@ fn evaluate_operation(operation: &Operation, operation_list: &OperationList) -> 
             data_index_stop_operand,
             market_interval,
         )) => {
-            let market_index_value = evaluate_operand(market_index_operand, operation_list);
-            let data_index_start_value = evaluate_operand(data_index_start_operand, operation_list);
-            let data_index_stop_value = evaluate_operand(data_index_stop_operand, operation_list);
+            let market_index_value = market_index_operand.evaluate(operation_list, trade_list);
+            let data_index_start_value =
+                data_index_start_operand.evaluate(operation_list, trade_list);
+            let data_index_stop_value =
+                data_index_stop_operand.evaluate(operation_list, trade_list);
 
             let market_data = get_market_data(
                 market_index_value.to_f32() as usize,
@@ -376,10 +460,11 @@ fn evaluate_operation(operation: &Operation, operation_list: &OperationList) -> 
                 MarketDataOperator::Volume => TerminalType::NumberList(market_data.volume),
                 MarketDataOperator::OrderBookAsks => TerminalType::NumberList(market_data.asks),
                 MarketDataOperator::OrderBookBids => TerminalType::NumberList(market_data.bids),
+                MarketDataOperator::TradeCount => TerminalType::NumberList(market_data.trade_count),
             }
         }
         Operation::NumPick((num_pick_operator, operand)) => {
-            let operand_value = evaluate_operand(operand, operation_list);
+            let operand_value = operand.evaluate(operation_list, trade_list);
             match operand_value {
                 TerminalType::Number(number) => TerminalType::Number(number),
                 TerminalType::NumberList(list) => {
