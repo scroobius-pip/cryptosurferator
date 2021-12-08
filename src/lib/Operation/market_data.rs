@@ -1,3 +1,4 @@
+use crate::lib::Operand::*;
 //market data intervals
 #[derive(Copy, Clone)]
 pub enum MarketDataInterval {
@@ -17,7 +18,6 @@ pub enum MarketDataInterval {
     Week1,
     Month1,
 }
-use crate::lib::Operand::*;
 
 //binary constant operators
 pub enum MarketDataOperator {

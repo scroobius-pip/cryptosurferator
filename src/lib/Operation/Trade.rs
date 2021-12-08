@@ -1,5 +1,5 @@
 //amount of leverage for futures trading, x1 for normal trading
-// use crate::lib::Operand
+use crate::lib::Operand::*;
 use std::fmt::Display;
 type MarketIndex = Operand;
 type MarketPrice = Operand;
@@ -50,11 +50,11 @@ impl Display for TradeOperator {
 pub type TradeList = Vec<Trade>;
 
 pub struct Trade {
-    operator: TradeOperator,
-    index: usize,
-    price: f32,
-    amount: f32,
-    leverage: TradeLeverage,
+    pub operator: TradeOperator,
+    pub index: usize,
+    pub price: f32,
+    pub amount: f32,
+    pub leverage: TradeLeverage,
 }
 
 //implment Display for Trade struct

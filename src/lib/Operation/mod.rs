@@ -1,22 +1,22 @@
-pub mod Bool;
-pub mod Branch;
-pub mod Constant;
-pub mod Index;
-pub mod MarketData;
-pub mod NumPick;
-pub mod Number;
-pub mod Trade;
+pub mod boolean;
+pub mod branch;
+pub mod constant;
+pub mod index;
+pub mod market_data;
+pub mod num_pick;
+pub mod number;
+pub mod trade;
 
 use crate::lib::Operand::*;
 use crate::lib::TerminalType::*;
-use Bool::*;
-use Branch::*;
-use Constant::*;
-use Index::*;
-use MarketData::*;
-use NumPick::*;
-use Number::*;
-use Trade::*;
+use boolean::*;
+use branch::*;
+use constant::*;
+use index::*;
+use market_data::*;
+use num_pick::*;
+use number::*;
+use trade::*;
 
 pub enum Operation {
     Branch(BranchOperation),
@@ -65,7 +65,7 @@ impl Operation {
                     market_index.evaluate(operation_list, trade_list).to_f32() as usize;
                 let market_price = market_price.evaluate(operation_list, trade_list).to_f32();
                 let market_amount = market_amount.evaluate(operation_list, trade_list).to_f32();
-                trade_list.push(Trade::Trade {
+                trade_list.push(trade::Trade {
                     operator: *operator,
                     index: market_index,
                     price: market_price,

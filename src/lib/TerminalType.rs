@@ -1,5 +1,5 @@
 use crate::lib::Operand::*;
-use crate::lib::Operation::Trade::TradeList;
+use crate::lib::Operation::trade::TradeList;
 use crate::lib::Operation::*;
 use std::cmp::Ordering;
 

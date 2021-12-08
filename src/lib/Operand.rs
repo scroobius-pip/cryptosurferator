@@ -1,4 +1,4 @@
-use crate::lib::Operation::Trade::*;
+use crate::lib::Operation::trade::*;
 use crate::lib::Operation::*;
 use crate::lib::TerminalType::*;
 pub enum Operand {
