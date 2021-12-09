@@ -16,6 +16,7 @@ use index::*;
 use market_data::*;
 use num_pick::*;
 use number::*;
+use std::default::Default;
 use trade::*;
 
 pub enum Operation {
@@ -37,9 +38,14 @@ impl Operation {
     ) -> TerminalType {
         match self {
             Operation::Index((operand_left, operand_right)) => {
-                let index = operand_left.evaluate(operation_list, trade_list).to_f32();
+                let index = operand_left.evaluate(operation_list, trade_list).to_f32() as usize;
                 let list = operand_right.evaluate(operation_list, trade_list).to_list();
-                TerminalType::Number(list[index as usize])
+                //check if index is out of bounds if so use last element
+                if index >= list.len() {
+                    TerminalType::Number(list[list.len() - 1])
+                } else {
+                    TerminalType::Number(list[index])
+                }
             }
             Operation::Constant((operator, operand)) => {
                 let market_index = operand.evaluate(operation_list, trade_list);
@@ -113,8 +119,14 @@ impl Operation {
             Operation::Branch((operand_operator, operand_left, operand_right)) => {
                 match operand_operator {
                     Operand::Pointer(pointer) => {
-                        let operand_operator_value =
-                            &operation_list[*pointer].evaluate(operation_list, trade_list);
+                        let operand_operator_value = &operation_list
+                            .get(*pointer)
+                            .unwrap_or(&Operation::Number((
+                                NumOperator::Add,
+                                Operand::None,
+                                Operand::None,
+                            )))
+                            .evaluate(operation_list, trade_list);
 
                         operand_operator_value.evaluate_branch_terminal(
                             operand_left,
@@ -171,4 +183,5 @@ impl Operation {
         }
     }
 }
+
 pub type OperationList = Vec<Operation>;

@@ -17,22 +17,18 @@ pub fn get_function_by_num_pick_operator(operator: &NumPickOperator) -> fn(Vec<f
         NumPickOperator::Average => |list| list.iter().sum::<f32>() / list.len() as f32,
         NumPickOperator::Sum => |list| list.iter().sum::<f32>(),
         NumPickOperator::Max => |list| {
-            let mut max = list[0];
-            for number in list.iter() {
-                if number > &max {
-                    max = *number;
-                }
+            if list.len() == 0 {
+                0.0
+            } else {
+                list.into_iter().reduce(f32::max).unwrap()
             }
-            max
         },
         NumPickOperator::Min => |list| {
-            let mut min = list[0];
-            for number in list.iter() {
-                if number < &min {
-                    min = *number;
-                }
+            if list.len() == 0 {
+                0.0
+            } else {
+                list.into_iter().reduce(f32::min).unwrap()
             }
-            min
         },
         NumPickOperator::Med => |list| {
             let mut sorted = list.clone();
@@ -40,9 +36,10 @@ pub fn get_function_by_num_pick_operator(operator: &NumPickOperator) -> fn(Vec<f
 
             let len = sorted.len();
             if len % 2 == 0 {
-                (sorted[len / 2] + sorted[(len / 2) + 1]) / 2.0
+                (sorted.get(len / 2).unwrap_or(&0.0) + sorted.get((len / 2) + 1).unwrap_or(&0.0))
+                    / 2.0
             } else {
-                sorted[len / 2]
+                *sorted.get(len / 2).unwrap_or(&0.0)
             }
         },
         NumPickOperator::Std => |list| {
