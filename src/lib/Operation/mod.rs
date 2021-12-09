@@ -124,11 +124,7 @@ impl Operation {
                     Operand::Pointer(pointer) => {
                         let operand_operator_value = &operation_list
                             .get(*pointer)
-                            .unwrap_or(&Operation::Number((
-                                NumOperator::Add,
-                                Operand::None,
-                                Operand::None,
-                            )))
+                            .unwrap_or(&Operation::Identity(TerminalType::Number(0.0)))
                             .evaluate(operation_list, trade_list);
 
                         operand_operator_value.evaluate_branch_terminal(
