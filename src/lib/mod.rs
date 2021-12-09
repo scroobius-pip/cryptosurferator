@@ -1,3 +1,3 @@
-pub mod Operand;
-pub mod Operation;
-pub mod TerminalType;
+pub mod operand;
+pub mod operation;
+pub mod terminal_type;

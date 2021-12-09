@@ -1,6 +1,6 @@
-use crate::lib::Operation::trade::*;
-use crate::lib::Operation::*;
-use crate::lib::TerminalType::*;
+use crate::lib::operation::trade::*;
+use crate::lib::operation::*;
+use crate::lib::terminal_type::*;
 pub enum Operand {
     Pointer(usize),
     Terminal(TerminalType),
@@ -22,13 +22,4 @@ impl Operand {
             Operand::None => TerminalType::Number(0.0),
         }
     }
-}
-
-fn evaluate_pointer(
-    pointer: &usize,
-    operation_list: &OperationList,
-    trade_list: &mut TradeList,
-) -> TerminalType {
-    let operation = &operation_list[*pointer];
-    operation.evaluate(operation_list, trade_list)
 }

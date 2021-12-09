@@ -1,4 +1,4 @@
-use crate::lib::Operand::*;
+use crate::lib::operand::*;
 
 pub enum NumOperator {
     Add,

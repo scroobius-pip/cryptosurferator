@@ -1,9 +1,10 @@
-use crate::lib::Operand::*;
-use crate::lib::Operation::trade::TradeList;
-use crate::lib::Operation::*;
+use crate::lib::operand::*;
+use crate::lib::operation::trade::TradeList;
+use crate::lib::operation::*;
 use std::cmp::Ordering;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
+
 pub enum TerminalType {
     Number(f32),
     NumberList(Vec<f32>),

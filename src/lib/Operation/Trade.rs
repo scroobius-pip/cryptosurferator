@@ -1,5 +1,5 @@
 //amount of leverage for futures trading, x1 for normal trading
-use crate::lib::Operand::*;
+use crate::lib::operand::*;
 use std::fmt::Display;
 type MarketIndex = Operand;
 type MarketPrice = Operand;
@@ -30,12 +30,24 @@ pub type TradeOperation = (
     TradeLeverage,
 );
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum TradeOperator {
     Buy,
     Sell,
     Nothing,
 }
+
+impl PartialEq for TradeOperator {
+    fn eq(&self, other: &TradeOperator) -> bool {
+        match (self, other) {
+            (TradeOperator::Buy, TradeOperator::Buy) => true,
+            (TradeOperator::Sell, TradeOperator::Sell) => true,
+            (TradeOperator::Nothing, TradeOperator::Nothing) => true,
+            _ => false,
+        }
+    }
+}
+
 //implement Display trait for TradeOperator
 impl Display for TradeOperator {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {

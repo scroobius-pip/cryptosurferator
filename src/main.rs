@@ -1,5 +1,5 @@
 mod lib;
-use lib::{Operation::trade::TradeList, Operation::*};
+use lib::{operation::trade::TradeList, operation::*};
 
 fn main() {
     let operations: OperationList = vec![];

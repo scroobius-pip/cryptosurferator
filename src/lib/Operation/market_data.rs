@@ -1,4 +1,4 @@
-use crate::lib::Operand::*;
+use crate::lib::operand::*;
 //market data intervals
 #[derive(Copy, Clone)]
 pub enum MarketDataInterval {

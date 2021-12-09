@@ -1,4 +1,4 @@
-use crate::lib::Operand::*;
+use crate::lib::operand::*;
 
 //boolean operator that works on two values of the same type
 pub enum BoolOperator {

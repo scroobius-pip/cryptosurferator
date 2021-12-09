@@ -1,4 +1,4 @@
-use crate::lib::Operand::*;
+use crate::lib::operand::*;
 //Pick operations collapase a list of types into a single type
 pub enum NumPickOperator {
     Average,

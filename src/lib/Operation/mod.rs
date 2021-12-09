@@ -6,9 +6,8 @@ pub mod market_data;
 pub mod num_pick;
 pub mod number;
 pub mod trade;
-
-use crate::lib::Operand::*;
-use crate::lib::TerminalType::*;
+use crate::lib::operand::*;
+use crate::lib::terminal_type::*;
 use boolean::*;
 use branch::*;
 use constant::*;
@@ -16,7 +15,6 @@ use index::*;
 use market_data::*;
 use num_pick::*;
 use number::*;
-use std::default::Default;
 use trade::*;
 
 pub enum Operation {
@@ -28,7 +26,10 @@ pub enum Operation {
     Number(NumOperation),
     Constant(ConstantOperation),
     Index(IndexOperation),
+    Identity(Operand),
 }
+
+pub type OperationList = Vec<Operation>;
 
 impl Operation {
     pub fn evaluate(
@@ -37,6 +38,7 @@ impl Operation {
         trade_list: &mut TradeList,
     ) -> TerminalType {
         match self {
+            Operation::Identity(operand) => operand.evaluate(operation_list, trade_list),
             Operation::Index((operand_left, operand_right)) => {
                 let index = operand_left.evaluate(operation_list, trade_list).to_f32() as usize;
                 let list = operand_right.evaluate(operation_list, trade_list).to_list();
@@ -50,8 +52,9 @@ impl Operation {
             Operation::Constant((operator, operand)) => {
                 let market_index = operand.evaluate(operation_list, trade_list);
                 match operator {
-                    ConstantOperator::CurrentMarketPrice => TerminalType::Number(0.0),
+                    ConstantOperator::MarketPrice => TerminalType::Number(0.0),
                     ConstantOperator::PortfolioValue => TerminalType::Number(0.0),
+                    _ => TerminalType::Number(0.0),
                 }
             }
             Operation::Number((operator, operand_left, operand_right)) => {
@@ -78,7 +81,7 @@ impl Operation {
                     amount: market_amount,
                     leverage: *trade_leverage,
                 });
-                TerminalType::Number(market_index as f32)
+                TerminalType::Number(1.0)
             }
             Operation::Bool((operator, operand_left, operand_right)) => {
                 let left_value = operand_left.evaluate(operation_list, trade_list);
@@ -184,4 +187,182 @@ impl Operation {
     }
 }
 
-pub type OperationList = Vec<Operation>;
+//tests
+#[cfg(test)]
+#[test]
+fn test_evaluate_operation() {
+    let operation_list = OperationList::new();
+    let mut trade_list = TradeList::new();
+    let operation = Operation::Number((
+        NumOperator::Add,
+        Operand::Terminal(TerminalType::Number(1.0)),
+        Operand::Terminal(TerminalType::Number(2.0)),
+    ));
+    let terminal_type = operation.evaluate(&operation_list, &mut trade_list);
+    assert_eq!(terminal_type, TerminalType::Number(3.0));
+}
+#[test]
+fn test_bool_operation() {
+    let operation_list = OperationList::new();
+    let mut trade_list = TradeList::new();
+    let operation = Operation::Bool((
+        BoolOperator::Equal,
+        Operand::Terminal(TerminalType::Number(1.0)),
+        Operand::Terminal(TerminalType::Number(2.0)),
+    ));
+    let terminal_type = operation.evaluate(&operation_list, &mut trade_list);
+    assert_eq!(terminal_type, TerminalType::Number(0.0));
+}
+#[test]
+fn test_branch_operation() {
+    let mut operation_list = OperationList::new();
+    let mut operation_list_2 = OperationList::new();
+    let mut trade_list = TradeList::new();
+    let operation = Operation::Branch((
+        Operand::Pointer(0),
+        Operand::Terminal(TerminalType::Number(1.0)),
+        Operand::Terminal(TerminalType::Number(2.0)),
+    ));
+    operation_list.push(Operation::Bool((
+        BoolOperator::Equal,
+        Operand::Terminal(TerminalType::Number(1.0)),
+        Operand::Terminal(TerminalType::Number(2.0)),
+    )));
+    operation_list_2.push(Operation::Bool((
+        BoolOperator::LessThan,
+        Operand::Terminal(TerminalType::Number(1.0)),
+        Operand::Terminal(TerminalType::Number(2.0)),
+    )));
+    let terminal_type = operation.evaluate(&operation_list, &mut trade_list);
+    assert_eq!(terminal_type, TerminalType::Number(2.0));
+
+    let terminal_type = operation.evaluate(&operation_list_2, &mut trade_list);
+    assert_eq!(terminal_type, TerminalType::Number(1.0));
+}
+
+#[test]
+fn test_num_pick_operation() {
+    let operation_list = OperationList::new();
+    let mut trade_list = TradeList::new();
+    let operation = Operation::NumPick((
+        NumPickOperator::Max,
+        Operand::Terminal(TerminalType::NumberList(vec![1.0, 2.0, 3.0])),
+    ));
+    let terminal_type = operation.evaluate(&operation_list, &mut trade_list);
+    assert_eq!(terminal_type, TerminalType::Number(3.0));
+}
+
+#[test]
+fn test_num_pic_with_branch_operation() {
+    let mut trade_list = TradeList::new();
+    let operation_list = vec![
+        Operation::NumPick((
+            NumPickOperator::Max,
+            Operand::Terminal(TerminalType::NumberList(vec![1.0, 2.0, 3.0])),
+        )),
+        Operation::Bool((
+            BoolOperator::GreaterThan,
+            Operand::Pointer(0),
+            Operand::Terminal(TerminalType::Number(2.0)),
+        )),
+        Operation::Branch((
+            Operand::Pointer(1),
+            Operand::Terminal(TerminalType::Number(1.0)),
+            Operand::Terminal(TerminalType::Number(2.0)),
+        )),
+    ];
+
+    let terminal_type =
+        operation_list[operation_list.len() - 1].evaluate(&operation_list, &mut trade_list);
+    assert_eq!(terminal_type, TerminalType::Number(1.0));
+}
+#[test]
+fn test_trade_operation() {
+    let mut trade_list = TradeList::new();
+    let mut operation_list = vec![
+        Operation::Trade((
+            TradeOperator::Buy,
+            Operand::Terminal(TerminalType::Number(1.0)),
+            Operand::Terminal(TerminalType::Number(2.0)),
+            Operand::Terminal(TerminalType::Number(3.0)),
+            TradeLeverage::X1,
+        )),
+        Operation::Trade((
+            TradeOperator::Sell,
+            Operand::Terminal(TerminalType::Number(1.0)),
+            Operand::Terminal(TerminalType::Number(2.0)),
+            Operand::Terminal(TerminalType::Number(3.0)),
+            TradeLeverage::X1,
+        )),
+        Operation::MarketData((
+            MarketDataOperator::High,
+            Operand::Terminal(TerminalType::Number(1.0)),
+            Operand::Terminal(TerminalType::Number(1.0)),
+            Operand::Terminal(TerminalType::Number(1.0)),
+            MarketDataInterval::Hour2,
+        )),
+        Operation::NumPick((NumPickOperator::Average, Operand::Pointer(2))),
+        Operation::NumPick((NumPickOperator::Max, Operand::Pointer(2))),
+        Operation::Bool((
+            BoolOperator::LessThan,
+            Operand::Pointer(4),
+            Operand::Pointer(3),
+        )),
+        Operation::Branch((
+            Operand::Pointer(5),
+            Operand::Pointer(0),
+            Operand::Pointer(1),
+        )),
+    ];
+
+    operation_list[operation_list.len() - 1].evaluate(&operation_list, &mut trade_list);
+
+    assert_eq!(trade_list.len(), 1);
+    assert_eq!(trade_list[0].operator, TradeOperator::Sell);
+}
+#[test]
+fn test_multiple_bool_operation() {
+    let mut trade_list = TradeList::new();
+    let mut operation_list = vec![
+        Operation::Bool((
+            BoolOperator::LessThan,
+            Operand::Terminal(TerminalType::Number(1.0)),
+            Operand::Terminal(TerminalType::Number(2.0)),
+        )),
+        Operation::Bool((
+            BoolOperator::Equal,
+            Operand::Terminal(TerminalType::Number(1.0)),
+            Operand::Terminal(TerminalType::Number(1.0)),
+        )),
+        Operation::MarketData((
+            MarketDataOperator::High,
+            Operand::Terminal(TerminalType::Number(1.0)),
+            Operand::Terminal(TerminalType::Number(1.0)),
+            Operand::Terminal(TerminalType::Number(1.0)),
+            MarketDataInterval::Hour2,
+        )),
+        Operation::NumPick((NumPickOperator::Length, Operand::Pointer(2))),
+        Operation::Bool((
+            BoolOperator::GreaterThan,
+            Operand::Pointer(3),
+            Operand::Terminal(TerminalType::Number(1.0)),
+        )),
+        Operation::Bool((BoolOperator::And, Operand::Pointer(0), Operand::Pointer(1))),
+        Operation::Bool((
+            BoolOperator::Or,
+            Operand::Terminal(TerminalType::Number(0.0)),
+            Operand::Pointer(5),
+        )),
+        Operation::Identity(Operand::Terminal(TerminalType::Number(1.0))),
+        Operation::Identity(Operand::Terminal(TerminalType::Number(2.0))),
+        Operation::Branch((
+            Operand::Pointer(6),
+            Operand::Pointer(7),
+            Operand::Pointer(8),
+        )),
+    ];
+
+    let terminal_type =
+        operation_list[operation_list.len() - 1].evaluate(&operation_list, &mut trade_list);
+    assert_eq!(terminal_type, TerminalType::Number(1.0));
+}
