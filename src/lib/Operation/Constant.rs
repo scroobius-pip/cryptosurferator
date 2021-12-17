@@ -9,8 +9,18 @@ pub enum ConstantOperator {
     SelectedMarketPortfolioRelativeValue,
     SelectedMarketPortfolioValue,
     BtcMarketIndex,
-    EthMarketIndex, 
-    // SentimentValue //sentiment score of an asset
+    EthMarketIndex,
+    CurrentTimestampMs,
+    One,
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
+    Seven,
+    Eight,
+    Nine,
+    Ten, // SentimentValue //sentiment score of an asset
 }
 
 pub type ConstantOperation = (ConstantOperator, Operand);
