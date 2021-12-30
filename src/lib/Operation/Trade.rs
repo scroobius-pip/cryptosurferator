@@ -5,7 +5,7 @@ type MarketIndex = Operand;
 type MarketPrice = Operand;
 type MarketAmount = Operand;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum TradeLeverage {
     X1,
     X2,
@@ -61,6 +61,7 @@ impl Display for TradeOperator {
 
 pub type TradeList = Vec<Trade>;
 
+#[derive(Debug, PartialEq)]
 pub struct Trade {
     pub operator: TradeOperator,
     pub index: usize,
@@ -78,4 +79,34 @@ impl Display for Trade {
             self.operator, self.index, self.price, self.amount, self.leverage
         )
     }
+}
+
+#[test]
+fn test_partial_eq() {
+    let trade1 = Trade {
+        operator: TradeOperator::Buy,
+        index: 1,
+        price: 1.0,
+        amount: 1.0,
+        leverage: TradeLeverage::X1,
+    };
+    let trade2 = Trade {
+        operator: TradeOperator::Buy,
+        index: 1,
+        price: 1.0,
+        amount: 1.0,
+        leverage: TradeLeverage::X1,
+    };
+    assert_eq!(trade1, trade2);
+
+    let trade3 = Trade {
+        operator: TradeOperator::Sell,
+        index: 1,
+        price: 1.0,
+        amount: 1.0,
+        leverage: TradeLeverage::X1,
+    };
+
+    assert_ne!(trade1, trade3);
+    assert_eq!(trade1, trade1);
 }

@@ -74,9 +74,9 @@ dependencies = [
 
 [[package]]
 name = "barter"
-version = "0.6.2"
+version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25b6880cd1c8a3defa3ca142d8034828477677a6403d561c74cb479e64e6eeff"
+checksum = "720b2a941bcd4d25564597fe363737970a6c933a06d400d22c7a152523ec4764"
 dependencies = [
  "barter-data",
  "chrono",

@@ -49,9 +49,18 @@ pub fn get_market_data(
     market_interval: MarketDataInterval,
 ) -> MarketData {
     let market_data = MarketData {
-        open: vec![1.0, 2.0, 3.0, 4.0, 5.0],
-        high: vec![1.0, 2.0, 3.0, 4.0, 5.0],
-        low: vec![1.0, 2.0, 3.0, 4.0, 5.0],
+        open: vec![1.0, 2.0, 3.0, 4.0, 5.0]
+            .into_iter()
+            .map(|x| x * market_index as f32)
+            .collect(),
+        high: vec![1.0, 2.0, 3.0, 4.0, 5.0]
+            .into_iter()
+            .map(|x| x * (1 / (market_index + 1)) as f32)
+            .collect(),
+        low: vec![1.0, 2.0, 3.0, 4.0, 5.0]
+            .into_iter()
+            .map(|x| x * market_index as f32)
+            .collect(),
         close: vec![1.0, 2.0, 3.0, 4.0, 5.0],
         volume: vec![1.0, 2.0, 3.0, 4.0, 5.0],
         asks: vec![],

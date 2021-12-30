@@ -12,11 +12,12 @@ impl Operand {
         &self,
         operation_list: &OperationList,
         trade_list: &mut TradeList,
+        context: &Context,
     ) -> TerminalType {
         match self {
             Operand::Pointer(pointer) => {
                 let operation = &operation_list[*pointer];
-                operation.evaluate(operation_list, trade_list)
+                operation.evaluate(operation_list, trade_list, context)
             }
             Operand::Terminal(terminal) => terminal.clone(),
             Operand::None => TerminalType::Number(0.0),

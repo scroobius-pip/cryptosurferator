@@ -36,13 +36,14 @@ impl TerminalType {
         operand_right: &Operand,
         operation_list: &OperationList,
         trade_list: &mut TradeList,
+        context: &Context,
     ) -> TerminalType {
         let terminal_value = self.to_bool();
 
         if terminal_value {
-            operand_left.evaluate(operation_list, trade_list)
+            operand_left.evaluate(operation_list, trade_list, context)
         } else {
-            operand_right.evaluate(operation_list, trade_list)
+            operand_right.evaluate(operation_list, trade_list, context)
         }
     }
 }

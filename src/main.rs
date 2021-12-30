@@ -5,6 +5,8 @@ use barter::data::market::MarketEvent;
 use barter::strategy::strategy::{Config as StrategyConfig, RSIStrategy};
 use chrono::{DateTime, TimeZone, Utc};
 use std::fs::File;
+use std::iter::Map;
+use std::vec::IntoIter;
 use CSVCandleIterator::CSVCandleData;
 // use barter_data::model::Candle;
 use barter_data::model::{Candle, MarketData};
@@ -64,7 +66,7 @@ fn main() {
                 _,
                 _,
                 _,
-            ): CSVCandleData = result.expect("error");
+            ): CSVCandleData = result.unwrap_or_default();
 
         Candle {
             close,
@@ -77,6 +79,36 @@ fn main() {
             trade_count: number_of_trades,
         }
     });
+    // .collect::<Vec<Candle>>()
+    // .into_iter();
+
+    let lego = HistoricDataLego {
+        exchange: "Binance",
+        symbol: "1inchbtc".to_string(),
+        candles: candle_iterator,
+    };
+
+    let mut data = HistoricCandleHandler::new(lego);
+    loop {
+        let market_event = match data.can_continue() {
+            Continuation::Continue => match data.generate_market() {
+                Some(market_event) => market_event,
+                None => continue,
+            },
+            Continuation::Stop => {
+                break;
+            }
+        };
+
+        match market_event.data {
+            MarketData::Candle(candle) => {
+                println!("{}", candle.close);
+            }
+            MarketData::Trade(trade) => {
+                println!("{}", trade.price);
+            }
+        }
+    }
 }
 
 mod CSVCandleIterator {
@@ -110,22 +142,10 @@ mod CSVCandleIterator {
         Ignore,
     );
     // type CSVCandleIterator = std::vec::IntoIter<CSVCandleData>;
-
-    struct CSVCandleIterator {
-        candle: Option<Candle>,
-    }
-    impl CSVCandleIterator {
-        fn new(&self, file: std::fs::File) -> Self {
-            let mut rdr = csv::ReaderBuilder::new()
-                .has_headers(false)
-                .from_reader(file);
-            for result in rdr.deserialize() {
-                // let record: CSVCandleData = result?;
-                let record: CSVCandleData = result.unwrap();
-                println!("{:?}", record);
-            }
-
-            Self { candle: None }
-        }
-    }
 }
+
+// pub struct TestHistoricDataLego<T: Iterator<Item = Candle>> {
+//     pub exchange: &'static str,
+//     pub symbol: String,
+//     pub candle_iterator: T,
+// }
