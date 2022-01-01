@@ -204,11 +204,11 @@ impl Operation {
                 market_interval,
             )) => {
                 //if context exists use it instead of market_index_operand
-                let market_index_value = match context {
-                    Context::None => {
-                        market_index_operand.evaluate(operation_list, trade_list, context)
-                    }
-                    Context::Some(terminal_type) => terminal_type.clone(),
+                // market_index_operand will only be evaluated normally if there is no context and itself is Operand::None
+                // if there is a context, it will be used if it market_index_operand == Operand::None
+                let market_index_value = match (market_index_operand, context) {
+                    (Operand::None, Context::Some(context_terminal_type)) => context_terminal_type.clone(),
+                    _ => market_index_operand.evaluate(operation_list, trade_list, context),
                 };
 
                 // let market_index_value =
@@ -485,7 +485,7 @@ fn test_market_sort() {
         Operation::Constant((ConstantOperator::Zero, Operand::None)),
         Operation::MarketData((
             MarketDataOperator::High,
-            Operand::None, //this would be the market index
+            Operand::None, //this would be the market index from the market sort operation
             Operand::Pointer(0),
             Operand::Pointer(0),
             MarketDataInterval::Minute5,
@@ -496,7 +496,20 @@ fn test_market_sort() {
             Operand::Pointer(2),
             Operand::Terminal(TerminalType::Number(2.0)),
         )),
-        Operation::MarketSort((Operand::Pointer(3),)),
+        Operation::Constant((ConstantOperator::BtcMarketIndex, Operand::None)),
+        Operation::MarketData((
+            MarketDataOperator::High,
+            Operand::Pointer(4), //btc market index
+            Operand::Pointer(0),
+            Operand::Pointer(0),
+            MarketDataInterval::Minute5,
+        )),
+        Operation::Number((
+            NumOperator::Subtract,
+            Operand::Pointer(3),
+            Operand::Pointer(5),
+        )),
+        Operation::MarketSort((Operand::Pointer(6),)),
         // Operation::Index((Operand::Pointer(0), Operand::Pointer(4))),
     ];
     //expect index to be 3
