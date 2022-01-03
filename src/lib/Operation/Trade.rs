@@ -27,7 +27,7 @@ pub type TradeOperation = (
     MarketIndex,
     MarketPrice,
     MarketAmount,
-    TradeLeverage,
+    // TradeLeverage,
 );
 
 #[derive(Copy, Clone, Debug)]
@@ -67,7 +67,7 @@ pub struct Trade {
     pub index: usize,
     pub price: f32,
     pub amount: f32,
-    pub leverage: TradeLeverage,
+    // pub leverage: TradeLeverage,
 }
 
 //implment Display for Trade struct
@@ -75,8 +75,8 @@ impl Display for Trade {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
-            "Trade: {}, {}, {}, {}, {}",
-            self.operator, self.index, self.price, self.amount, self.leverage
+            "Trade: {}, {}, {}, {}",
+            self.operator, self.index, self.price, self.amount,
         )
     }
 }
@@ -88,14 +88,14 @@ fn test_partial_eq() {
         index: 1,
         price: 1.0,
         amount: 1.0,
-        leverage: TradeLeverage::X1,
+        // leverage: TradeLeverage::X1,
     };
     let trade2 = Trade {
         operator: TradeOperator::Buy,
         index: 1,
         price: 1.0,
         amount: 1.0,
-        leverage: TradeLeverage::X1,
+        // leverage: TradeLeverage::X1,
     };
     assert_eq!(trade1, trade2);
 
@@ -104,7 +104,7 @@ fn test_partial_eq() {
         index: 1,
         price: 1.0,
         amount: 1.0,
-        leverage: TradeLeverage::X1,
+        // leverage: TradeLeverage::X1,
     };
 
     assert_ne!(trade1, trade3);

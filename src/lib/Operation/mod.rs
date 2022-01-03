@@ -107,13 +107,7 @@ impl Operation {
                 TerminalType::Number(operator.func()(left.to_f32(), right.to_f32()))
             }
 
-            Operation::Trade((
-                operator,
-                market_index,
-                market_price,
-                market_amount,
-                trade_leverage,
-            )) => {
+            Operation::Trade((operator, market_index, market_price, market_amount)) => {
                 let market_index = market_index
                     .evaluate(operation_list, trade_list, context)
                     .to_f32() as usize;
@@ -128,7 +122,6 @@ impl Operation {
                     index: market_index,
                     price: market_price,
                     amount: market_amount,
-                    leverage: *trade_leverage,
                 });
                 TerminalType::Number(1.0)
             }
@@ -199,27 +192,28 @@ impl Operation {
             Operation::MarketData((
                 market_data_operator,
                 market_index_operand,
-                data_index_start_operand,
-                data_index_stop_operand,
-                market_interval,
+                timestamp_start_operand,
+                timestamp_duration_operand,
             )) => {
                 //if context exists use it instead of market_index_operand
                 // market_index_operand will only be evaluated normally if there is no context and itself is Operand::None
                 // if there is a context, it will be used if it market_index_operand == Operand::None
                 let market_index_value = match (market_index_operand, context) {
-                    (Operand::None, Context::Some(context_terminal_type)) => context_terminal_type.clone(),
+                    (Operand::None, Context::Some(context_terminal_type)) => {
+                        context_terminal_type.clone()
+                    }
                     _ => market_index_operand.evaluate(operation_list, trade_list, context),
                 };
 
-                let data_index_start_value =
-                    data_index_start_operand.evaluate(operation_list, trade_list, context);
-                let data_index_stop_value =
-                    data_index_stop_operand.evaluate(operation_list, trade_list, context);
+                let timestamp_start_value =
+                    timestamp_start_operand.evaluate(operation_list, trade_list, context);
+                let timestamp_duration_value =
+                    timestamp_duration_operand.evaluate(operation_list, trade_list, context);
+
                 let market_data = get_market_data(
                     market_index_value.to_f32() as usize,
-                    data_index_start_value.to_f32() as usize,
-                    data_index_stop_value.to_f32() as usize,
-                    *market_interval,
+                    timestamp_start_value.to_f32(),
+                    timestamp_duration_value.to_f32(),
                 );
                 match market_data_operator {
                     MarketDataOperator::Open => TerminalType::NumberList(market_data.open),
@@ -365,21 +359,18 @@ fn test_trade_operation() {
             Operand::Terminal(TerminalType::Number(1.0)),
             Operand::Terminal(TerminalType::Number(2.0)),
             Operand::Terminal(TerminalType::Number(3.0)),
-            TradeLeverage::X1,
         )),
         Operation::Trade((
             TradeOperator::Sell,
             Operand::Terminal(TerminalType::Number(1.0)),
             Operand::Terminal(TerminalType::Number(2.0)),
             Operand::Terminal(TerminalType::Number(3.0)),
-            TradeLeverage::X1,
         )),
         Operation::MarketData((
             MarketDataOperator::High,
             Operand::Terminal(TerminalType::Number(1.0)),
             Operand::Terminal(TerminalType::Number(1.0)),
             Operand::Terminal(TerminalType::Number(1.0)),
-            MarketDataInterval::Hour2,
         )),
         Operation::NumPick((NumPickOperator::Average, Operand::Pointer(2))),
         Operation::NumPick((NumPickOperator::Max, Operand::Pointer(2))),
@@ -420,7 +411,6 @@ fn test_multiple_bool_operation() {
             Operand::Terminal(TerminalType::Number(1.0)),
             Operand::Terminal(TerminalType::Number(1.0)),
             Operand::Terminal(TerminalType::Number(1.0)),
-            MarketDataInterval::Hour2,
         )),
         Operation::NumPick((NumPickOperator::Length, Operand::Pointer(2))),
         Operation::Bool((
@@ -464,7 +454,6 @@ fn test_market_sort() {
             Operand::None, //this would be the market index
             Operand::Pointer(0),
             Operand::Pointer(0),
-            MarketDataInterval::Minute5,
         )),
         Operation::NumPick((NumPickOperator::Max, Operand::Pointer(0))),
         Operation::Number((NumOperator::Log, Operand::Pointer(1), Operand::None)),
@@ -486,7 +475,6 @@ fn test_market_sort() {
             Operand::None, //this would be the market index from the market sort operation
             Operand::Pointer(0),
             Operand::Pointer(0),
-            MarketDataInterval::Minute5,
         )),
         Operation::NumPick((NumPickOperator::Med, Operand::Pointer(1))),
         Operation::Number((
@@ -500,7 +488,6 @@ fn test_market_sort() {
             Operand::Pointer(4), //btc market index
             Operand::Pointer(0),
             Operand::Pointer(0),
-            MarketDataInterval::Minute5,
         )),
         Operation::Number((
             NumOperator::Subtract,

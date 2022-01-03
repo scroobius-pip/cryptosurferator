@@ -1,0 +1,1 @@
+1. An operation cannot request a market datum with a timestamp > than current timestamp

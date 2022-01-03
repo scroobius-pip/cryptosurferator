@@ -11,6 +11,7 @@ pub enum ConstantOperator {
     BtcMarketIndex,
     EthMarketIndex,
     CurrentTimestampMs,
+    SelectedMarketListingTimestampMs, //the first timestamp of the market
     Zero,
     One,
     Two,
@@ -21,12 +22,13 @@ pub enum ConstantOperator {
     GoldenRatio,
     EulerNumber,
     Six,
+
     Seven,
     Eight,
     Nine,
     Ten, // SentimentValue //sentiment score of an asset
-    CurrentOperationIndex,
-    PreviousOperationIndex,
+    // CurrentOperationIndex,
+    // PreviousOperationIndex,
 }
 
 pub type ConstantOperation = (ConstantOperator, Operand);

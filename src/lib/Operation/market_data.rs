@@ -31,23 +31,20 @@ pub enum MarketDataOperator {
     OrderBookAsks,
 }
 type MarketIndex = Operand;
-type MarketDataIndexStart = Operand;
+type MarketDataTimestampStart = Operand;
 type MarketDataIndexStop = Operand;
+type MarketDataDuration = Operand;
 
+//the concept of market tickers is not needed,
+// simply calculate the market data with dynamic durations and a start timestamp
 pub type MarketDataOperation = (
     MarketDataOperator,
     MarketIndex,
-    MarketDataIndexStart,
-    MarketDataIndexStop,
-    MarketDataInterval,
+    MarketDataTimestampStart,
+    MarketDataDuration,
 );
 
-pub fn get_market_data(
-    market_index: usize,
-    data_index_start: usize,
-    data_index_stop: usize,
-    market_interval: MarketDataInterval,
-) -> MarketData {
+pub fn get_market_data(market_index: usize, timestamp_start: f32, duration: f32) -> MarketData {
     let market_data = MarketData {
         open: vec![1.0, 2.0, 3.0, 4.0, 5.0]
             .into_iter()
