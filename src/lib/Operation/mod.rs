@@ -211,8 +211,6 @@ impl Operation {
                     _ => market_index_operand.evaluate(operation_list, trade_list, context),
                 };
 
-                // let market_index_value =
-                //     market_index_operand.evaluate(operation_list, trade_list, context);
                 let data_index_start_value =
                     data_index_start_operand.evaluate(operation_list, trade_list, context);
                 let data_index_stop_value =
