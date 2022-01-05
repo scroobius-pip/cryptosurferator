@@ -1,23 +1,4 @@
 use crate::lib::operand::*;
-//market data intervals
-#[derive(Copy, Clone)]
-pub enum MarketDataInterval {
-    Minute1,
-    Minute3,
-    Minute5,
-    Minute15,
-    Minute30,
-    Hour1,
-    Hour2,
-    Hour4,
-    Hour6,
-    Hour8,
-    Hour12,
-    Day1,
-    Day3,
-    Week1,
-    Month1,
-}
 
 //binary constant operators
 pub enum MarketDataOperator {
@@ -30,9 +11,9 @@ pub enum MarketDataOperator {
     OrderBookBids,
     OrderBookAsks,
 }
+
 type MarketIndex = Operand;
 type MarketDataTimestampStart = Operand;
-type MarketDataIndexStop = Operand;
 type MarketDataDuration = Operand;
 
 //the concept of market tickers is not needed,
