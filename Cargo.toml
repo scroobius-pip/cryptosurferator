@@ -7,7 +7,8 @@ edition = "2021"
 
 [dependencies]
 ordered-float = "2.8.0"
-barter = "0.6.3"
-barter-data = "0.2.10"
+barter = "0.6.5"
+barter-data = "0.2.11"
 csv = "1.1"
 chrono = "0.4"
+lerp = { version = "0.4", features = ["derive"] }

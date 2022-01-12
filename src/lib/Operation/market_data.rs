@@ -8,8 +8,8 @@ pub enum MarketDataOperator {
     High,
     Low,
     Close,
-    OrderBookBids,
-    OrderBookAsks,
+    // OrderBookBids,
+    // OrderBookAsks,
 }
 
 type MarketIndex = Operand;
@@ -41,11 +41,16 @@ pub fn get_market_data(market_index: usize, timestamp_start: f32, duration: f32)
             .collect(),
         close: vec![1.0, 2.0, 3.0, 4.0, 5.0],
         volume: vec![1.0, 2.0, 3.0, 4.0, 5.0],
-        asks: vec![],
-        bids: vec![],
         trade_count: vec![],
     };
     market_data
+}
+
+pub struct OrderBook {
+    pub bid_price: Vec<f32>,
+    pub bid_volume: Vec<f32>,
+    pub ask_price: Vec<f32>,
+    pub ask_volume: Vec<f32>,
 }
 
 pub struct MarketData {
@@ -55,6 +60,4 @@ pub struct MarketData {
     pub close: Vec<f32>,
     pub volume: Vec<f32>,
     pub trade_count: Vec<f32>,
-    pub bids: Vec<f32>,
-    pub asks: Vec<f32>,
 }

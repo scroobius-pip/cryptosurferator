@@ -10,7 +10,7 @@ use std::vec::IntoIter;
 use CSVCandleIterator::CSVCandleData;
 // use barter_data::model::Candle;
 use barter_data::model::{Candle, MarketData};
-use lib::{operation::trade::TradeList, operation::*};
+use lib::{operation::trade::TradeList, operation::*, ticker_store::*};
 
 fn main() {
     // let operations: OperationList = vec![];

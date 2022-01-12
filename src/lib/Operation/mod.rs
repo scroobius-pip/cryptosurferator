@@ -221,8 +221,8 @@ impl Operation {
                     MarketDataOperator::Low => TerminalType::NumberList(market_data.low),
                     MarketDataOperator::Close => TerminalType::NumberList(market_data.close),
                     MarketDataOperator::Volume => TerminalType::NumberList(market_data.volume),
-                    MarketDataOperator::OrderBookAsks => TerminalType::NumberList(market_data.asks),
-                    MarketDataOperator::OrderBookBids => TerminalType::NumberList(market_data.bids),
+                    // MarketDataOperator::OrderBookAsks => TerminalType::NumberList(market_data.asks),
+                    // MarketDataOperator::OrderBookBids => TerminalType::NumberList(market_data.bids),
                     MarketDataOperator::TradeCount => {
                         TerminalType::NumberList(market_data.trade_count)
                     }
