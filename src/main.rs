@@ -1,53 +1,15 @@
 mod lib;
-use barter::data::handler::historic::{HistoricCandleHandler, HistoricDataLego};
-use barter::data::handler::{Continuation, Continuer, MarketGenerator};
-use barter::data::market::MarketEvent;
-use barter::strategy::strategy::{Config as StrategyConfig, RSIStrategy};
-use chrono::{DateTime, TimeZone, Utc};
+use barter::data::handler::{
+    historical::{HistoricalCandleHandler, HistoricalDataLego},
+    Continuation, Continuer, MarketGenerator,
+};
+use chrono::{TimeZone, Utc};
 use std::fs::File;
-use std::iter::Map;
-use std::vec::IntoIter;
-use CSVCandleIterator::CSVCandleData;
-// use barter_data::model::Candle;
+use csv_candle_iterator::CSVCandleData;
 use barter_data::model::{Candle, MarketData};
-use lib::{operation::trade::TradeList, operation::*, ticker_store::*};
 
 fn main() {
-    // let operations: OperationList = vec![];
-    // let mut trade_list: TradeList = vec![];
-    // operations[operations.len() - 1].evaluate(&operations, &mut trade_list);
 
-    // //print all items in  TradeList vector
-    // for trade in trade_list {
-    //     println!("{}", trade);
-    // }
-    // let lego = HistoricDataLego {
-    //     exchange: "Binance",
-    //     symbol: "btcusdt".to_string(),
-    //     candle_iterator: vec![Candle::default()].into_iter(),
-    // };
-
-    // let mut data = HistoricCandleHandler::new(lego);
-    // loop {
-    //     let market_event = match data.can_continue() {
-    //         Continuation::Continue => match data.generate_market() {
-    //             Some(market_event) => market_event,
-    //             None => continue,
-    //         },
-    //         Continuation::Stop => {
-    //             break;
-    //         }
-    //     };
-
-    //     match market_event.data {
-    //         MarketData::Candle(candle) => {
-    //             println!("{}", candle.close);
-    //         }
-    //         MarketData::Trade(trade) => {
-    //             println!("{}", trade.price);
-    //         }
-    //     }
-    // }
     let mut rdr = csv::ReaderBuilder::new()
         .has_headers(false)
         .from_reader(File::open("src/data/1inch.csv").expect("file not found"));
@@ -80,13 +42,14 @@ fn main() {
         }
     });
 
-    let lego = HistoricDataLego {
+    let lego = HistoricalDataLego {
         exchange: "Binance",
         symbol: "1inchbtc".to_string(),
         candles: candle_iterator,
     };
 
-    let mut data = HistoricCandleHandler::new(lego);
+    let mut data = HistoricalCandleHandler::new(lego);
+    
     loop {
         let market_event = match data.can_continue() {
             Continuation::Continue => match data.generate_market() {
@@ -109,8 +72,8 @@ fn main() {
     }
 }
 
-mod CSVCandleIterator {
-    use barter_data::model::Candle;
+mod csv_candle_iterator {
+    
     type Timestamp = u64;
     type Opentime = Timestamp;
     type Closetime = Timestamp;

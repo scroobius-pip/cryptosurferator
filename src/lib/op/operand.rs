@@ -1,6 +1,6 @@
-use crate::lib::operation::trade::*;
-use crate::lib::operation::*;
-use crate::lib::terminal_type::*;
+use crate::lib::op::operation::trade::*;
+use crate::lib::op::operation::*;
+use crate::lib::op::terminal_type::*;
 pub enum Operand {
     Pointer(usize),
     Terminal(TerminalType),

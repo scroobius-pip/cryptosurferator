@@ -1,6 +1,6 @@
-use crate::lib::operand::*;
-use crate::lib::operation::trade::TradeList;
-use crate::lib::operation::*;
+use crate::lib::op::operand::*;
+use crate::lib::op::operation::trade::TradeList;
+use crate::lib::op::operation::*;
 use std::cmp::Ordering;
 
 #[derive(Clone, Debug)]
