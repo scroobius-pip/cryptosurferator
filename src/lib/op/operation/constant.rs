@@ -22,11 +22,11 @@ pub enum ConstantOperator {
     GoldenRatio,
     EulerNumber,
     Six,
-
     Seven,
     Eight,
     Nine,
-    Ten, // SentimentValue //sentiment score of an asset
+    Ten, 
+    // SentimentValue //sentiment score of an asset
     // CurrentOperationIndex,
     // PreviousOperationIndex,
 }

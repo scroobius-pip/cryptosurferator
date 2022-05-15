@@ -11,7 +11,8 @@ struct Ticker {
     high: f32,
     low: f32,
 }
-
+///ticker_size is in minutes
+/// 
 impl TickerStore {
     fn new(ticker_size: u64, start_timestamp: u64) -> TickerStore {
         TickerStore {

@@ -8,8 +8,8 @@ pub mod num_pick;
 pub mod number;
 pub mod trade;
 
-use crate::lib::operand::*;
-use crate::lib::terminal_type::*;
+use crate::lib::op::operand::*;
+use crate::lib::op::terminal_type::*;
 use boolean::*;
 use branch::*;
 use constant::*;
@@ -25,6 +25,7 @@ pub enum Operation {
     Bool(BoolOperation),
     Trade(TradeOperation),
     MarketData(MarketDataOperation),
+    ///Pick operations collapase a list of types into a single type
     NumPick(NumPickOperation),
     Number(NumOperation),
     Constant(ConstantOperation),

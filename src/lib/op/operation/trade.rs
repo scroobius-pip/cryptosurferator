@@ -1,5 +1,5 @@
 //amount of leverage for futures trading, x1 for normal trading
-use crate::lib::operand::*;
+use crate::lib::op::operand::*;
 use std::fmt::Display;
 type MarketIndex = Operand;
 type MarketPrice = Operand;

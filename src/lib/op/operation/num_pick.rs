@@ -1,5 +1,4 @@
-use crate::lib::operand::*;
-//Pick operations collapase a list of types into a single type
+use crate::lib::op::operand::*;
 pub enum NumPickOperator {
     Average,
     Sum,
@@ -10,6 +9,7 @@ pub enum NumPickOperator {
     Length,
 }
 
+///Pick operations collapase a list of types into a single type
 pub type NumPickOperation = (NumPickOperator, Operand);
 
 pub fn get_function_by_num_pick_operator(operator: &NumPickOperator) -> fn(Vec<f32>) -> f32 {
