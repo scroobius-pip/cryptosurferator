@@ -8,6 +8,7 @@ pub mod num_pick;
 pub mod number;
 pub mod trade;
 
+use crate::lib::op::environment::{DefaultEnv, Env};
 use crate::lib::op::operand::*;
 use crate::lib::op::terminal_type::*;
 use boolean::*;
@@ -43,6 +44,7 @@ impl Operation {
         operation_list: &OperationList,
         trade_list: &mut TradeList,
         context: &Context,
+        env: &impl Env,
     ) -> TerminalType {
         match self {
             Operation::MarketSort((operand,)) => {
@@ -53,6 +55,7 @@ impl Operation {
                             operation_list,
                             trade_list,
                             &Some(TerminalType::Number(*market_index_a)),
+                            env,
                         )
                         .to_f32(); //call with market_index_a
                     let value_b = operand
@@ -60,19 +63,22 @@ impl Operation {
                             operation_list,
                             trade_list,
                             &Some(TerminalType::Number(*market_index_b)),
+                            env,
                         )
                         .to_f32(); //call with market_index_b
                     value_a.partial_cmp(&value_b).unwrap()
                 });
                 TerminalType::NumberList(market_index_list)
             }
-            Operation::Identity(operand) => operand.evaluate(operation_list, trade_list, context),
+            Operation::Identity(operand) => {
+                operand.evaluate(operation_list, trade_list, context, env)
+            }
             Operation::Index((operand_left, operand_right)) => {
                 let index = operand_left
-                    .evaluate(operation_list, trade_list, context)
+                    .evaluate(operation_list, trade_list, context, env)
                     .to_f32() as usize;
                 let list = operand_right
-                    .evaluate(operation_list, trade_list, context)
+                    .evaluate(operation_list, trade_list, context, env)
                     .to_list();
                 //check if index is out of bounds if so use last element
                 if index >= list.len() {
@@ -104,20 +110,20 @@ impl Operation {
                 }
             }
             Operation::Number((operator, operand_left, operand_right)) => {
-                let left = operand_left.evaluate(operation_list, trade_list, context);
-                let right = operand_right.evaluate(operation_list, trade_list, context);
+                let left = operand_left.evaluate(operation_list, trade_list, context, env);
+                let right = operand_right.evaluate(operation_list, trade_list, context, env);
                 TerminalType::Number(operator.func()(left.to_f32(), right.to_f32()))
             }
 
             Operation::Trade((operator, market_index, market_price, market_amount)) => {
                 let market_index = market_index
-                    .evaluate(operation_list, trade_list, context)
+                    .evaluate(operation_list, trade_list, context, env)
                     .to_f32() as usize;
                 let market_price = market_price
-                    .evaluate(operation_list, trade_list, context)
+                    .evaluate(operation_list, trade_list, context, env)
                     .to_f32();
                 let market_amount = market_amount
-                    .evaluate(operation_list, trade_list, context)
+                    .evaluate(operation_list, trade_list, context, env)
                     .to_f32();
                 trade_list.push(trade::Trade {
                     operator: *operator,
@@ -128,8 +134,10 @@ impl Operation {
                 TerminalType::Number(1.0)
             }
             Operation::Bool((operator, operand_left, operand_right)) => {
-                let left_value = operand_left.evaluate(operation_list, trade_list, context);
-                let right_value = operand_right.evaluate(operation_list, trade_list, context);
+                let left_value =
+                    operand_left.evaluate(operation_list, trade_list, context, &DefaultEnv);
+                let right_value =
+                    operand_right.evaluate(operation_list, trade_list, context, &DefaultEnv);
                 match operator {
                     BoolOperator::Equal => {
                         TerminalType::Number((left_value == right_value) as i32 as f32)
@@ -171,7 +179,7 @@ impl Operation {
                             .unwrap_or(&Operation::Identity(Operand::Terminal(
                                 TerminalType::Number(0.0),
                             )))
-                            .evaluate(operation_list, trade_list, context);
+                            .evaluate(operation_list, trade_list, context, env);
 
                         operand_operator_value.evaluate_branch_terminal(
                             operand_left,
@@ -179,6 +187,7 @@ impl Operation {
                             operation_list,
                             trade_list,
                             context,
+                            env,
                         )
                     }
                     Operand::Terminal(terminal) => terminal.evaluate_branch_terminal(
@@ -187,6 +196,7 @@ impl Operation {
                         operation_list,
                         trade_list,
                         context,
+                        env,
                     ),
                     Operand::None => TerminalType::Number(0.0),
                 }
@@ -204,13 +214,13 @@ impl Operation {
                     (Operand::None, Context::Some(context_terminal_type)) => {
                         context_terminal_type.clone()
                     }
-                    _ => market_index_operand.evaluate(operation_list, trade_list, context),
+                    _ => market_index_operand.evaluate(operation_list, trade_list, context, env),
                 };
 
                 let timestamp_start_value =
-                    timestamp_start_operand.evaluate(operation_list, trade_list, context);
+                    timestamp_start_operand.evaluate(operation_list, trade_list, context, env);
                 let timestamp_duration_value =
-                    timestamp_duration_operand.evaluate(operation_list, trade_list, context);
+                    timestamp_duration_operand.evaluate(operation_list, trade_list, context, env);
 
                 let market_data = get_market_data(
                     market_index_value.to_f32() as usize,
@@ -232,7 +242,7 @@ impl Operation {
             }
             Operation::NumPick((num_pick_operator, operand)) => {
                 let operand_value = operand
-                    .evaluate(operation_list, trade_list, context)
+                    .evaluate(operation_list, trade_list, context, env)
                     .to_list();
                 let function = get_function_by_num_pick_operator(num_pick_operator);
                 TerminalType::Number(function(operand_value))
@@ -251,7 +261,7 @@ fn test_evaluate_operation() {
     let operation = Operation::Number((NumOperator::Add, Operand::Pointer(0), Operand::Pointer(1)));
     operation_list.push(Operation::Constant((ConstantOperator::One, Operand::None)));
     operation_list.push(Operation::Constant((ConstantOperator::Two, Operand::None)));
-    let terminal_type = operation.evaluate(&operation_list, &mut trade_list, &context);
+    let terminal_type = operation.evaluate(&operation_list, &mut trade_list, &context, &DefaultEnv);
     assert_eq!(terminal_type, TerminalType::Number(3.0));
 }
 
@@ -265,7 +275,7 @@ fn test_evaluate_operation_number_constants() {
         Operand::Terminal(TerminalType::Number(1.0)),
         Operand::Terminal(TerminalType::Number(2.0)),
     ));
-    let terminal_type = operation.evaluate(&operation_list, &mut trade_list, &context);
+    let terminal_type = operation.evaluate(&operation_list, &mut trade_list, &context, &DefaultEnv);
     assert_eq!(terminal_type, TerminalType::Number(3.0));
 }
 
@@ -279,7 +289,7 @@ fn test_bool_operation() {
         Operand::Terminal(TerminalType::Number(1.0)),
         Operand::Terminal(TerminalType::Number(2.0)),
     ));
-    let terminal_type = operation.evaluate(&operation_list, &mut trade_list, &context);
+    let terminal_type = operation.evaluate(&operation_list, &mut trade_list, &context, &DefaultEnv);
     assert_eq!(terminal_type, TerminalType::Number(0.0));
 }
 #[test]
@@ -303,10 +313,11 @@ fn test_branch_operation() {
         Operand::Terminal(TerminalType::Number(1.0)),
         Operand::Terminal(TerminalType::Number(2.0)),
     )));
-    let terminal_type = operation.evaluate(&operation_list, &mut trade_list, &context);
+    let terminal_type = operation.evaluate(&operation_list, &mut trade_list, &context, &DefaultEnv);
     assert_eq!(terminal_type, TerminalType::Number(2.0));
 
-    let terminal_type = operation.evaluate(&operation_list_2, &mut trade_list, &context);
+    let terminal_type =
+        operation.evaluate(&operation_list_2, &mut trade_list, &context, &DefaultEnv);
     assert_eq!(terminal_type, TerminalType::Number(1.0));
 }
 
@@ -319,7 +330,7 @@ fn test_num_pick_operation() {
         NumPickOperator::Max,
         Operand::Terminal(TerminalType::NumberList(vec![1.0, 2.0, 3.0])),
     ));
-    let terminal_type = operation.evaluate(&operation_list, &mut trade_list, &context);
+    let terminal_type = operation.evaluate(&operation_list, &mut trade_list, &context, &DefaultEnv);
     assert_eq!(terminal_type, TerminalType::Number(3.0));
 }
 
@@ -348,6 +359,7 @@ fn test_num_pic_with_branch_operation() {
         &operation_list,
         &mut trade_list,
         &context,
+        &DefaultEnv,
     );
     assert_eq!(terminal_type, TerminalType::Number(1.0));
 }
@@ -388,7 +400,12 @@ fn test_trade_operation() {
         )),
     ];
 
-    operation_list[operation_list.len() - 1].evaluate(&operation_list, &mut trade_list, &context);
+    operation_list[operation_list.len() - 1].evaluate(
+        &operation_list,
+        &mut trade_list,
+        &context,
+        &DefaultEnv,
+    );
 
     assert_eq!(trade_list.len(), 1);
     assert_eq!(trade_list[0].operator, TradeOperator::Sell);
@@ -439,6 +456,7 @@ fn test_multiple_bool_operation() {
         &operation_list,
         &mut trade_list,
         &context,
+        &DefaultEnv,
     );
     assert_eq!(terminal_type, TerminalType::Number(1.0));
 }
@@ -467,6 +485,7 @@ fn test_market_sort() {
         &operation_list,
         &mut trade_list,
         &context,
+        &DefaultEnv,
     );
     assert_eq!(market_index, TerminalType::Number(0.0));
 
@@ -504,6 +523,7 @@ fn test_market_sort() {
         &operation_list_2,
         &mut trade_list,
         &context,
+        &DefaultEnv,
     );
     println!("{:?}", market_index);
 }

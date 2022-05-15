@@ -3,6 +3,8 @@ use crate::lib::op::operation::trade::TradeList;
 use crate::lib::op::operation::*;
 use std::cmp::Ordering;
 
+use super::environment::Env;
+
 #[derive(Clone, Debug)]
 
 pub enum TerminalType {
@@ -37,13 +39,14 @@ impl TerminalType {
         operation_list: &OperationList,
         trade_list: &mut TradeList,
         context: &Context,
+        env: &impl Env
     ) -> TerminalType {
         let terminal_value = self.to_bool();
 
         if terminal_value {
-            operand_left.evaluate(operation_list, trade_list, context)
+            operand_left.evaluate(operation_list, trade_list, context,env)
         } else {
-            operand_right.evaluate(operation_list, trade_list, context)
+            operand_right.evaluate(operation_list, trade_list, context,env)
         }
     }
 }
