@@ -8,7 +8,7 @@ pub mod num_pick;
 pub mod number;
 pub mod trade;
 
-use crate::lib::op::environment::{DefaultEnv, Env};
+use crate::lib::op::environment::Env;
 use crate::lib::op::operand::*;
 use crate::lib::op::terminal_type::*;
 use boolean::*;
@@ -48,7 +48,7 @@ impl Operation {
     ) -> TerminalType {
         match self {
             Operation::MarketSort((operand,)) => {
-                let mut market_index_list = vec![0.0, 1.0, 2.0, 3.0];
+                let mut market_index_list = env.get_market_index_list();
                 market_index_list.sort_by(|market_index_a, market_index_b| {
                     let value_a = operand
                         .evaluate(
@@ -76,7 +76,7 @@ impl Operation {
             Operation::Index((operand_left, operand_right)) => {
                 let index = operand_left
                     .evaluate(operation_list, trade_list, context, env)
-                    .to_f32() as usize;
+                    .to_usize();
                 let list = operand_right
                     .evaluate(operation_list, trade_list, context, env)
                     .to_list();
@@ -87,28 +87,36 @@ impl Operation {
                     TerminalType::Number(list[index])
                 }
             }
-            Operation::Constant((operator, operand)) => {
-                // let market_index = operand.evaluate(operation_list, trade_list);
-                match operator {
-                    ConstantOperator::MarketPrice => TerminalType::Number(0.0),
-                    ConstantOperator::PortfolioValue => TerminalType::Number(0.0),
-                    ConstantOperator::Zero => TerminalType::Number(0.0),
-                    ConstantOperator::One => TerminalType::Number(1.0),
-                    ConstantOperator::Two => TerminalType::Number(2.0),
-                    ConstantOperator::Three => TerminalType::Number(3.0),
-                    ConstantOperator::Four => TerminalType::Number(4.0),
-                    ConstantOperator::Five => TerminalType::Number(5.0),
-                    ConstantOperator::Six => TerminalType::Number(6.0),
-                    ConstantOperator::Seven => TerminalType::Number(7.0),
-                    ConstantOperator::Eight => TerminalType::Number(8.0),
-                    ConstantOperator::Nine => TerminalType::Number(9.0),
-                    ConstantOperator::Ten => TerminalType::Number(10.0),
-                    ConstantOperator::PI => TerminalType::Number(3.141592653589793),
-                    ConstantOperator::GoldenRatio => TerminalType::Number(1.618033988749895),
-                    ConstantOperator::EulerNumber => TerminalType::Number(2.718281828459045),
-                    _ => TerminalType::Number(0.0),
+            Operation::Constant((operator, operand)) => match operator {
+                ConstantOperator::MarketPrice => {
+                    let market_index = operand.evaluate(operation_list, trade_list, context, env);
+                    TerminalType::Number(env.get_market_price(market_index.to_usize()))
                 }
-            }
+                ConstantOperator::PortfolioValue => {
+                    let overall_portfolio_value = env.get_overall_portfolio_value();
+                    TerminalType::Number(overall_portfolio_value)
+                }
+                ConstantOperator::SelectedMarketPortfolioValue => {
+                    let market_index = operand.evaluate(operation_list, trade_list, context, env);
+                    TerminalType::Number(env.get_market_portfolio_value(market_index.to_usize()))
+                }
+
+                ConstantOperator::Zero => TerminalType::Number(0.0),
+                ConstantOperator::One => TerminalType::Number(1.0),
+                ConstantOperator::Two => TerminalType::Number(2.0),
+                ConstantOperator::Three => TerminalType::Number(3.0),
+                ConstantOperator::Four => TerminalType::Number(4.0),
+                ConstantOperator::Five => TerminalType::Number(5.0),
+                ConstantOperator::Six => TerminalType::Number(6.0),
+                ConstantOperator::Seven => TerminalType::Number(7.0),
+                ConstantOperator::Eight => TerminalType::Number(8.0),
+                ConstantOperator::Nine => TerminalType::Number(9.0),
+                ConstantOperator::Ten => TerminalType::Number(10.0),
+                ConstantOperator::PI => TerminalType::Number(3.141592653589793),
+                ConstantOperator::GoldenRatio => TerminalType::Number(1.618033988749895),
+                ConstantOperator::EulerNumber => TerminalType::Number(2.718281828459045),
+                _ => TerminalType::Number(0.0),
+            },
             Operation::Number((operator, operand_left, operand_right)) => {
                 let left = operand_left.evaluate(operation_list, trade_list, context, env);
                 let right = operand_right.evaluate(operation_list, trade_list, context, env);
@@ -118,7 +126,7 @@ impl Operation {
             Operation::Trade((operator, market_index, market_price, market_amount)) => {
                 let market_index = market_index
                     .evaluate(operation_list, trade_list, context, env)
-                    .to_f32() as usize;
+                    .to_usize();
                 let market_price = market_price
                     .evaluate(operation_list, trade_list, context, env)
                     .to_f32();
@@ -134,10 +142,8 @@ impl Operation {
                 TerminalType::Number(1.0)
             }
             Operation::Bool((operator, operand_left, operand_right)) => {
-                let left_value =
-                    operand_left.evaluate(operation_list, trade_list, context, &DefaultEnv);
-                let right_value =
-                    operand_right.evaluate(operation_list, trade_list, context, &DefaultEnv);
+                let left_value = operand_left.evaluate(operation_list, trade_list, context, env);
+                let right_value = operand_right.evaluate(operation_list, trade_list, context, env);
                 match operator {
                     BoolOperator::Equal => {
                         TerminalType::Number((left_value == right_value) as i32 as f32)
@@ -222,8 +228,8 @@ impl Operation {
                 let timestamp_duration_value =
                     timestamp_duration_operand.evaluate(operation_list, trade_list, context, env);
 
-                let market_data = get_market_data(
-                    market_index_value.to_f32() as usize,
+                let market_data = env.get_market_data(
+                    market_index_value.to_usize(),
                     timestamp_start_value.to_f32(),
                     timestamp_duration_value.to_f32(),
                 );
@@ -253,277 +259,323 @@ impl Operation {
 
 //tests
 #[cfg(test)]
-#[test]
-fn test_evaluate_operation() {
-    let context = None;
-    let mut operation_list = OperationList::new();
-    let mut trade_list = TradeList::new();
-    let operation = Operation::Number((NumOperator::Add, Operand::Pointer(0), Operand::Pointer(1)));
-    operation_list.push(Operation::Constant((ConstantOperator::One, Operand::None)));
-    operation_list.push(Operation::Constant((ConstantOperator::Two, Operand::None)));
-    let terminal_type = operation.evaluate(&operation_list, &mut trade_list, &context, &DefaultEnv);
-    assert_eq!(terminal_type, TerminalType::Number(3.0));
-}
 
-#[test]
-fn test_evaluate_operation_number_constants() {
-    let context = None;
-    let operation_list = OperationList::new();
-    let mut trade_list = TradeList::new();
-    let operation = Operation::Number((
-        NumOperator::Add,
-        Operand::Terminal(TerminalType::Number(1.0)),
-        Operand::Terminal(TerminalType::Number(2.0)),
-    ));
-    let terminal_type = operation.evaluate(&operation_list, &mut trade_list, &context, &DefaultEnv);
-    assert_eq!(terminal_type, TerminalType::Number(3.0));
-}
+mod tests {
+    use crate::lib::op::{environment::Env, operand::*, operation::*, terminal_type::*};
 
-#[test]
-fn test_bool_operation() {
-    let context = None;
-    let operation_list = OperationList::new();
-    let mut trade_list = TradeList::new();
-    let operation = Operation::Bool((
-        BoolOperator::Equal,
-        Operand::Terminal(TerminalType::Number(1.0)),
-        Operand::Terminal(TerminalType::Number(2.0)),
-    ));
-    let terminal_type = operation.evaluate(&operation_list, &mut trade_list, &context, &DefaultEnv);
-    assert_eq!(terminal_type, TerminalType::Number(0.0));
-}
-#[test]
-fn test_branch_operation() {
-    let context = None;
-    let mut operation_list = OperationList::new();
-    let mut operation_list_2 = OperationList::new();
-    let mut trade_list = TradeList::new();
-    let operation = Operation::Branch((
-        Operand::Pointer(0),
-        Operand::Terminal(TerminalType::Number(1.0)),
-        Operand::Terminal(TerminalType::Number(2.0)),
-    ));
-    operation_list.push(Operation::Bool((
-        BoolOperator::Equal,
-        Operand::Terminal(TerminalType::Number(1.0)),
-        Operand::Terminal(TerminalType::Number(2.0)),
-    )));
-    operation_list_2.push(Operation::Bool((
-        BoolOperator::LessThan,
-        Operand::Terminal(TerminalType::Number(1.0)),
-        Operand::Terminal(TerminalType::Number(2.0)),
-    )));
-    let terminal_type = operation.evaluate(&operation_list, &mut trade_list, &context, &DefaultEnv);
-    assert_eq!(terminal_type, TerminalType::Number(2.0));
+    struct DefaultEnv {}
+    impl Env for DefaultEnv {}
 
-    let terminal_type =
-        operation.evaluate(&operation_list_2, &mut trade_list, &context, &DefaultEnv);
-    assert_eq!(terminal_type, TerminalType::Number(1.0));
-}
+    #[test]
+    fn test_evaluate_operation() {
+        let DefaultEnv = DefaultEnv {};
+        let context = None;
+        let mut operation_list = OperationList::new();
+        let mut trade_list = TradeList::new();
+        let operation =
+            Operation::Number((NumOperator::Add, Operand::Pointer(0), Operand::Pointer(1)));
+        operation_list.push(Operation::Constant((ConstantOperator::One, Operand::None)));
+        operation_list.push(Operation::Constant((ConstantOperator::Two, Operand::None)));
+        let terminal_type =
+            operation.evaluate(&operation_list, &mut trade_list, &context, &DefaultEnv);
+        assert_eq!(terminal_type, TerminalType::Number(3.0));
+    }
 
-#[test]
-fn test_num_pick_operation() {
-    let context = None;
-    let operation_list = OperationList::new();
-    let mut trade_list = TradeList::new();
-    let operation = Operation::NumPick((
-        NumPickOperator::Max,
-        Operand::Terminal(TerminalType::NumberList(vec![1.0, 2.0, 3.0])),
-    ));
-    let terminal_type = operation.evaluate(&operation_list, &mut trade_list, &context, &DefaultEnv);
-    assert_eq!(terminal_type, TerminalType::Number(3.0));
-}
-
-#[test]
-fn test_num_pic_with_branch_operation() {
-    let context = None;
-    let mut trade_list = TradeList::new();
-    let operation_list = vec![
-        Operation::NumPick((
-            NumPickOperator::Max,
-            Operand::Terminal(TerminalType::NumberList(vec![1.0, 2.0, 3.0])),
-        )),
-        Operation::Bool((
-            BoolOperator::GreaterThan,
-            Operand::Pointer(0),
-            Operand::Terminal(TerminalType::Number(2.0)),
-        )),
-        Operation::Branch((
-            Operand::Pointer(1),
+    #[test]
+    fn test_evaluate_operation_number_constants() {
+        let DefaultEnv = DefaultEnv {};
+        let context = None;
+        let operation_list = OperationList::new();
+        let mut trade_list = TradeList::new();
+        let operation = Operation::Number((
+            NumOperator::Add,
             Operand::Terminal(TerminalType::Number(1.0)),
             Operand::Terminal(TerminalType::Number(2.0)),
-        )),
-    ];
+        ));
+        let terminal_type =
+            operation.evaluate(&operation_list, &mut trade_list, &context, &DefaultEnv);
+        assert_eq!(terminal_type, TerminalType::Number(3.0));
+    }
 
-    let terminal_type = operation_list[operation_list.len() - 1].evaluate(
-        &operation_list,
-        &mut trade_list,
-        &context,
-        &DefaultEnv,
-    );
-    assert_eq!(terminal_type, TerminalType::Number(1.0));
-}
-#[test]
-fn test_trade_operation() {
-    let context = None;
-    let mut trade_list = TradeList::new();
-    let operation_list = vec![
-        Operation::Trade((
-            TradeOperator::Buy,
-            Operand::Terminal(TerminalType::Number(1.0)),
-            Operand::Terminal(TerminalType::Number(2.0)),
-            Operand::Terminal(TerminalType::Number(3.0)),
-        )),
-        Operation::Trade((
-            TradeOperator::Sell,
-            Operand::Terminal(TerminalType::Number(1.0)),
-            Operand::Terminal(TerminalType::Number(2.0)),
-            Operand::Terminal(TerminalType::Number(3.0)),
-        )),
-        Operation::MarketData((
-            MarketDataOperator::High,
-            Operand::Terminal(TerminalType::Number(1.0)),
-            Operand::Terminal(TerminalType::Number(1.0)),
-            Operand::Terminal(TerminalType::Number(1.0)),
-        )),
-        Operation::NumPick((NumPickOperator::Average, Operand::Pointer(2))),
-        Operation::NumPick((NumPickOperator::Max, Operand::Pointer(2))),
-        Operation::Bool((
-            BoolOperator::LessThan,
-            Operand::Pointer(4),
-            Operand::Pointer(3),
-        )),
-        Operation::Branch((
-            Operand::Pointer(5),
-            Operand::Pointer(0),
-            Operand::Pointer(1),
-        )),
-    ];
-
-    operation_list[operation_list.len() - 1].evaluate(
-        &operation_list,
-        &mut trade_list,
-        &context,
-        &DefaultEnv,
-    );
-
-    assert_eq!(trade_list.len(), 1);
-    assert_eq!(trade_list[0].operator, TradeOperator::Sell);
-}
-#[test]
-fn test_multiple_bool_operation() {
-    let context = None;
-    let mut trade_list = TradeList::new();
-    let operation_list = vec![
-        Operation::Bool((
-            BoolOperator::LessThan,
-            Operand::Terminal(TerminalType::Number(1.0)),
-            Operand::Terminal(TerminalType::Number(2.0)),
-        )),
-        Operation::Bool((
+    #[test]
+    fn test_bool_operation() {
+        let DefaultEnv = DefaultEnv {};
+        let context = None;
+        let operation_list = OperationList::new();
+        let mut trade_list = TradeList::new();
+        let operation = Operation::Bool((
             BoolOperator::Equal,
             Operand::Terminal(TerminalType::Number(1.0)),
-            Operand::Terminal(TerminalType::Number(1.0)),
-        )),
-        Operation::MarketData((
-            MarketDataOperator::High,
-            Operand::Terminal(TerminalType::Number(1.0)),
-            Operand::Terminal(TerminalType::Number(1.0)),
-            Operand::Terminal(TerminalType::Number(1.0)),
-        )),
-        Operation::NumPick((NumPickOperator::Length, Operand::Pointer(2))),
-        Operation::Bool((
-            BoolOperator::GreaterThan,
-            Operand::Pointer(3),
-            Operand::Terminal(TerminalType::Number(1.0)),
-        )),
-        Operation::Bool((BoolOperator::And, Operand::Pointer(0), Operand::Pointer(1))),
-        Operation::Bool((
-            BoolOperator::Or,
-            Operand::Terminal(TerminalType::Number(0.0)),
-            Operand::Pointer(5),
-        )),
-        Operation::Identity(Operand::Terminal(TerminalType::Number(1.0))),
-        Operation::Identity(Operand::Terminal(TerminalType::Number(2.0))),
-        Operation::Branch((
-            Operand::Pointer(6),
-            Operand::Pointer(7),
-            Operand::Pointer(8),
-        )),
-    ];
-
-    let terminal_type = operation_list[operation_list.len() - 1].evaluate(
-        &operation_list,
-        &mut trade_list,
-        &context,
-        &DefaultEnv,
-    );
-    assert_eq!(terminal_type, TerminalType::Number(1.0));
-}
-
-#[test]
-
-fn test_market_sort() {
-    let context: Context = None;
-    let mut trade_list = TradeList::new();
-
-    let operation_list = vec![
-        Operation::Constant((ConstantOperator::Zero, Operand::None)),
-        Operation::MarketData((
-            MarketDataOperator::High,
-            Operand::None, //this would be the market index
-            Operand::Pointer(0),
-            Operand::Pointer(0),
-        )),
-        Operation::NumPick((NumPickOperator::Max, Operand::Pointer(0))),
-        Operation::Number((NumOperator::Log, Operand::Pointer(1), Operand::None)),
-        Operation::MarketSort((Operand::Pointer(2),)),
-        Operation::Index((Operand::Pointer(0), Operand::Pointer(4))),
-    ];
-    //expect index to be 0
-    let market_index = operation_list[operation_list.len() - 1].evaluate(
-        &operation_list,
-        &mut trade_list,
-        &context,
-        &DefaultEnv,
-    );
-    assert_eq!(market_index, TerminalType::Number(0.0));
-
-    let operation_list_2 = vec![
-        Operation::Constant((ConstantOperator::Zero, Operand::None)),
-        Operation::MarketData((
-            MarketDataOperator::High,
-            Operand::None, //this would be the market index from the market sort operation
-            Operand::Pointer(0),
-            Operand::Pointer(0),
-        )),
-        Operation::NumPick((NumPickOperator::Med, Operand::Pointer(1))),
-        Operation::Number((
-            NumOperator::Tan,
-            Operand::Pointer(2),
             Operand::Terminal(TerminalType::Number(2.0)),
-        )),
-        Operation::Constant((ConstantOperator::BtcMarketIndex, Operand::None)),
-        Operation::MarketData((
-            MarketDataOperator::High,
-            Operand::Pointer(4), //btc market index
+        ));
+        let terminal_type =
+            operation.evaluate(&operation_list, &mut trade_list, &context, &DefaultEnv);
+        assert_eq!(terminal_type, TerminalType::Number(0.0));
+    }
+    #[test]
+    fn test_branch_operation() {
+        let DefaultEnv = DefaultEnv {};
+        let context = None;
+        let mut operation_list = OperationList::new();
+        let mut operation_list_2 = OperationList::new();
+        let mut trade_list = TradeList::new();
+        let operation = Operation::Branch((
             Operand::Pointer(0),
-            Operand::Pointer(0),
-        )),
-        Operation::Number((
-            NumOperator::Subtract,
-            Operand::Pointer(3),
-            Operand::Pointer(5),
-        )),
-        Operation::MarketSort((Operand::Pointer(6),)),
-        // Operation::Index((Operand::Pointer(0), Operand::Pointer(4))),
-    ];
-    //expect index to be 3
-    let market_index = operation_list_2[operation_list_2.len() - 1].evaluate(
-        &operation_list_2,
-        &mut trade_list,
-        &context,
-        &DefaultEnv,
-    );
-    println!("{:?}", market_index);
+            Operand::Terminal(TerminalType::Number(1.0)),
+            Operand::Terminal(TerminalType::Number(2.0)),
+        ));
+        operation_list.push(Operation::Bool((
+            BoolOperator::Equal,
+            Operand::Terminal(TerminalType::Number(1.0)),
+            Operand::Terminal(TerminalType::Number(2.0)),
+        )));
+        operation_list_2.push(Operation::Bool((
+            BoolOperator::LessThan,
+            Operand::Terminal(TerminalType::Number(1.0)),
+            Operand::Terminal(TerminalType::Number(2.0)),
+        )));
+        let terminal_type =
+            operation.evaluate(&operation_list, &mut trade_list, &context, &DefaultEnv);
+        assert_eq!(terminal_type, TerminalType::Number(2.0));
+
+        let terminal_type =
+            operation.evaluate(&operation_list_2, &mut trade_list, &context, &DefaultEnv);
+        assert_eq!(terminal_type, TerminalType::Number(1.0));
+    }
+
+    #[test]
+    fn test_num_pick_operation() {
+        let DefaultEnv = DefaultEnv {};
+        let context = None;
+        let operation_list = OperationList::new();
+        let mut trade_list = TradeList::new();
+        let operation = Operation::NumPick((
+            NumPickOperator::Max,
+            Operand::Terminal(TerminalType::NumberList(vec![1.0, 2.0, 3.0])),
+        ));
+        let terminal_type =
+            operation.evaluate(&operation_list, &mut trade_list, &context, &DefaultEnv);
+        assert_eq!(terminal_type, TerminalType::Number(3.0));
+    }
+
+    #[test]
+    fn test_num_pic_with_branch_operation() {
+        let DefaultEnv = DefaultEnv {};
+        let context = None;
+        let mut trade_list = TradeList::new();
+        let operation_list = vec![
+            Operation::NumPick((
+                NumPickOperator::Max,
+                Operand::Terminal(TerminalType::NumberList(vec![1.0, 2.0, 3.0])),
+            )),
+            Operation::Bool((
+                BoolOperator::GreaterThan,
+                Operand::Pointer(0),
+                Operand::Terminal(TerminalType::Number(2.0)),
+            )),
+            Operation::Branch((
+                Operand::Pointer(1),
+                Operand::Terminal(TerminalType::Number(1.0)),
+                Operand::Terminal(TerminalType::Number(2.0)),
+            )),
+        ];
+
+        let terminal_type = operation_list[operation_list.len() - 1].evaluate(
+            &operation_list,
+            &mut trade_list,
+            &context,
+            &DefaultEnv,
+        );
+        assert_eq!(terminal_type, TerminalType::Number(1.0));
+    }
+    #[test]
+    fn test_trade_operation() {
+        let DefaultEnv = DefaultEnv {};
+        let context = None;
+        let mut trade_list = TradeList::new();
+        let operation_list = vec![
+            Operation::Trade((
+                TradeOperator::Buy,
+                Operand::Terminal(TerminalType::Number(1.0)),
+                Operand::Terminal(TerminalType::Number(2.0)),
+                Operand::Terminal(TerminalType::Number(3.0)),
+            )),
+            Operation::Trade((
+                TradeOperator::Sell,
+                Operand::Terminal(TerminalType::Number(1.0)),
+                Operand::Terminal(TerminalType::Number(2.0)),
+                Operand::Terminal(TerminalType::Number(3.0)),
+            )),
+            Operation::MarketData((
+                MarketDataOperator::High,
+                Operand::Terminal(TerminalType::Number(1.0)),
+                Operand::Terminal(TerminalType::Number(1.0)),
+                Operand::Terminal(TerminalType::Number(1.0)),
+            )),
+            Operation::NumPick((NumPickOperator::Average, Operand::Pointer(2))),
+            Operation::NumPick((NumPickOperator::Max, Operand::Pointer(2))),
+            Operation::Bool((
+                BoolOperator::LessThan,
+                Operand::Pointer(4),
+                Operand::Pointer(3),
+            )),
+            Operation::Branch((
+                Operand::Pointer(5),
+                Operand::Pointer(0),
+                Operand::Pointer(1),
+            )),
+        ];
+
+        operation_list[operation_list.len() - 1].evaluate(
+            &operation_list,
+            &mut trade_list,
+            &context,
+            &DefaultEnv,
+        );
+
+        assert_eq!(trade_list.len(), 1);
+        assert_eq!(trade_list[0].operator, TradeOperator::Sell);
+    }
+    #[test]
+    fn test_multiple_bool_operation() {
+        let DefaultEnv = DefaultEnv {};
+        let context = None;
+        let mut trade_list = TradeList::new();
+        let operation_list = vec![
+            Operation::Bool((
+                BoolOperator::LessThan,
+                Operand::Terminal(TerminalType::Number(1.0)),
+                Operand::Terminal(TerminalType::Number(2.0)),
+            )),
+            Operation::Bool((
+                BoolOperator::Equal,
+                Operand::Terminal(TerminalType::Number(1.0)),
+                Operand::Terminal(TerminalType::Number(1.0)),
+            )),
+            Operation::MarketData((
+                MarketDataOperator::High,
+                Operand::Terminal(TerminalType::Number(1.0)),
+                Operand::Terminal(TerminalType::Number(1.0)),
+                Operand::Terminal(TerminalType::Number(1.0)),
+            )),
+            Operation::NumPick((NumPickOperator::Length, Operand::Pointer(2))),
+            Operation::Bool((
+                BoolOperator::GreaterThan,
+                Operand::Pointer(3),
+                Operand::Terminal(TerminalType::Number(1.0)),
+            )),
+            Operation::Bool((BoolOperator::And, Operand::Pointer(0), Operand::Pointer(1))),
+            Operation::Bool((
+                BoolOperator::Or,
+                Operand::Terminal(TerminalType::Number(0.0)),
+                Operand::Pointer(5),
+            )),
+            Operation::Identity(Operand::Terminal(TerminalType::Number(1.0))),
+            Operation::Identity(Operand::Terminal(TerminalType::Number(2.0))),
+            Operation::Branch((
+                Operand::Pointer(6),
+                Operand::Pointer(7),
+                Operand::Pointer(8),
+            )),
+        ];
+
+        let terminal_type = operation_list[operation_list.len() - 1].evaluate(
+            &operation_list,
+            &mut trade_list,
+            &context,
+            &DefaultEnv,
+        );
+        assert_eq!(terminal_type, TerminalType::Number(1.0));
+    }
+
+    #[test]
+
+    fn test_market_sort() {
+        struct D {}
+        impl Env for D {
+            fn get_market_index_list(&self) -> Vec<f32> {
+                vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+            }
+
+            fn get_market_data(
+                &self,
+                market_index: usize,
+                timestamp_start: f32,
+                duration: f32,
+            ) -> MarketData {
+                MarketData {
+                    close: vec![],
+                    high: vec![if market_index == 6 { 1000.0 } else { 0.0 }],
+                    low: vec![],
+                    open: vec![],
+                    trade_count: vec![],
+                    volume: vec![],
+                }
+            }
+
+            //
+        }
+        let context: Context = None;
+        let mut trade_list = TradeList::new();
+
+        let operation_list = vec![
+            Operation::Constant((ConstantOperator::Zero, Operand::None)),
+            Operation::MarketData((
+                MarketDataOperator::High,
+                Operand::None, //this would be the market index
+                Operand::Pointer(0),
+                Operand::Pointer(0),
+            )),
+            Operation::NumPick((NumPickOperator::Max, Operand::Pointer(1))),
+            Operation::MarketSort((Operand::Pointer(2),)),
+            Operation::Index((Operand::Pointer(0), Operand::Pointer(3))),
+        ];
+
+        //expect index to be 6.0
+        let market_index = operation_list[operation_list.len() - 1].evaluate(
+            &operation_list,
+            &mut trade_list,
+            &context,
+            &D {},
+        );
+        assert_eq!(market_index, TerminalType::Number(6.0));
+
+        let operation_list_2 = vec![
+            Operation::Constant((ConstantOperator::Zero, Operand::None)),
+            Operation::MarketData((
+                MarketDataOperator::High,
+                Operand::None, //this would be the market index from the market sort operation
+                Operand::Pointer(0),
+                Operand::Pointer(0),
+            )),
+            Operation::NumPick((NumPickOperator::Med, Operand::Pointer(1))),
+            Operation::Number((
+                NumOperator::Tan,
+                Operand::Pointer(2),
+                Operand::Terminal(TerminalType::Number(2.0)),
+            )),
+            Operation::Constant((ConstantOperator::BtcMarketIndex, Operand::None)),
+            Operation::MarketData((
+                MarketDataOperator::High,
+                Operand::Pointer(4), //btc market index
+                Operand::Pointer(0),
+                Operand::Pointer(0),
+            )),
+            Operation::Number((
+                NumOperator::Subtract,
+                Operand::Pointer(3),
+                Operand::Pointer(5),
+            )),
+            Operation::MarketSort((Operand::Pointer(6),)),
+            // Operation::Index((Operand::Pointer(0), Operand::Pointer(4))),
+        ];
+        //expect index to be 3
+        let market_index = operation_list_2[operation_list_2.len() - 1].evaluate(
+            &operation_list_2,
+            &mut trade_list,
+            &context,
+            &D {},
+        );
+        println!("{:?}", market_index);
+    }
 }

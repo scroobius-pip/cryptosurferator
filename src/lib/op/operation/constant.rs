@@ -10,6 +10,7 @@ pub enum ConstantOperator {
     SelectedMarketPortfolioValue,
     BtcMarketIndex,
     EthMarketIndex,
+    USDTMarketIndex,
     CurrentTimestampMs,
     SelectedMarketListingTimestampMs, //the first timestamp of the market
     Zero,

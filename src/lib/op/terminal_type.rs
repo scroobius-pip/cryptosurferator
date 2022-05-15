@@ -13,12 +13,22 @@ pub enum TerminalType {
 }
 
 impl TerminalType {
+
+
     pub fn to_f32(&self) -> f32 {
         match self {
             TerminalType::Number(n) => *n as f32,
             TerminalType::NumberList(n) => n.len() as f32,
         }
     }
+
+    pub fn to_usize(&self) -> usize {
+        match self {
+            TerminalType::Number(n) => *n as usize,
+            TerminalType::NumberList(n) => n.len(),
+        }
+    }
+
     pub fn to_bool(&self) -> bool {
         match self {
             TerminalType::Number(n) => *n > 0.0,
