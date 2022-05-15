@@ -7,6 +7,7 @@ pub mod market_sort;
 pub mod num_pick;
 pub mod number;
 pub mod trade;
+
 use crate::lib::operand::*;
 use crate::lib::terminal_type::*;
 use boolean::*;

@@ -79,8 +79,6 @@ fn main() {
             trade_count: number_of_trades,
         }
     });
-    // .collect::<Vec<Candle>>()
-    // .into_iter();
 
     let lego = HistoricDataLego {
         exchange: "Binance",
