@@ -33,6 +33,7 @@ pub struct OrderBook {
     pub ask_volume: Vec<f32>,
 }
 
+#[derive(Debug, Clone)]
 pub struct MarketData {
     pub open: Vec<f32>,
     pub high: Vec<f32>,

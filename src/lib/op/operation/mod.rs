@@ -73,19 +73,23 @@ impl Operation {
             Operation::Identity(operand) => {
                 operand.evaluate(operation_list, trade_list, context, env)
             }
-            Operation::Index((operand_left, operand_right)) => {
-                let index = operand_left
-                    .evaluate(operation_list, trade_list, context, env)
-                    .to_usize();
+            Operation::Index((operator, operand_right)) => {
                 let list = operand_right
                     .evaluate(operation_list, trade_list, context, env)
                     .to_list();
-                //check if index is out of bounds if so use last element
-                if index >= list.len() {
-                    TerminalType::Number(list[list.len() - 1])
-                } else {
-                    TerminalType::Number(list[index])
-                }
+
+                let index = match operator {
+                    IndexOperator::First => 0,
+                    IndexOperator::Last => list.len() - 1,
+                    IndexOperator::Operand(operand) => {
+                        let index = operand
+                            .evaluate(operation_list, trade_list, context, env)
+                            .to_usize();
+                        index.max(0).min(list.len() - 1)
+                    }
+                };
+
+                TerminalType::Number(list[index])
             }
             Operation::Constant((operator, operand)) => match operator {
                 ConstantOperator::MarketPrice => {
@@ -251,6 +255,7 @@ impl Operation {
                     .evaluate(operation_list, trade_list, context, env)
                     .to_list();
                 let function = get_function_by_num_pick_operator(num_pick_operator);
+
                 TerminalType::Number(function(operand_value))
             }
         }
@@ -503,14 +508,16 @@ mod tests {
                 timestamp_start: f32,
                 duration: f32,
             ) -> MarketData {
-                MarketData {
+                let market_data = MarketData {
                     close: vec![],
                     high: vec![if market_index == 6 { 1000.0 } else { 0.0 }],
                     low: vec![],
                     open: vec![],
                     trade_count: vec![],
                     volume: vec![],
-                }
+                };
+
+                market_data
             }
 
             //
@@ -528,7 +535,7 @@ mod tests {
             )),
             Operation::NumPick((NumPickOperator::Max, Operand::Pointer(1))),
             Operation::MarketSort((Operand::Pointer(2),)),
-            Operation::Index((Operand::Pointer(0), Operand::Pointer(3))),
+            Operation::Index((IndexOperator::Last, Operand::Pointer(3))),
         ];
 
         //expect index to be 6.0
@@ -539,43 +546,5 @@ mod tests {
             &D {},
         );
         assert_eq!(market_index, TerminalType::Number(6.0));
-
-        let operation_list_2 = vec![
-            Operation::Constant((ConstantOperator::Zero, Operand::None)),
-            Operation::MarketData((
-                MarketDataOperator::High,
-                Operand::None, //this would be the market index from the market sort operation
-                Operand::Pointer(0),
-                Operand::Pointer(0),
-            )),
-            Operation::NumPick((NumPickOperator::Med, Operand::Pointer(1))),
-            Operation::Number((
-                NumOperator::Tan,
-                Operand::Pointer(2),
-                Operand::Terminal(TerminalType::Number(2.0)),
-            )),
-            Operation::Constant((ConstantOperator::BtcMarketIndex, Operand::None)),
-            Operation::MarketData((
-                MarketDataOperator::High,
-                Operand::Pointer(4), //btc market index
-                Operand::Pointer(0),
-                Operand::Pointer(0),
-            )),
-            Operation::Number((
-                NumOperator::Subtract,
-                Operand::Pointer(3),
-                Operand::Pointer(5),
-            )),
-            Operation::MarketSort((Operand::Pointer(6),)),
-            // Operation::Index((Operand::Pointer(0), Operand::Pointer(4))),
-        ];
-        //expect index to be 3
-        let market_index = operation_list_2[operation_list_2.len() - 1].evaluate(
-            &operation_list_2,
-            &mut trade_list,
-            &context,
-            &D {},
-        );
-        println!("{:?}", market_index);
     }
 }
