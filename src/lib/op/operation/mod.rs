@@ -243,8 +243,6 @@ impl Operation {
                     MarketDataOperator::Low => TerminalType::NumberList(market_data.low),
                     MarketDataOperator::Close => TerminalType::NumberList(market_data.close),
                     MarketDataOperator::Volume => TerminalType::NumberList(market_data.volume),
-                    // MarketDataOperator::OrderBookAsks => TerminalType::NumberList(market_data.asks),
-                    // MarketDataOperator::OrderBookBids => TerminalType::NumberList(market_data.bids),
                     MarketDataOperator::TradeCount => {
                         TerminalType::NumberList(market_data.trade_count)
                     }
@@ -260,6 +258,20 @@ impl Operation {
             }
         }
     }
+
+    // pub fn mutate(&self) -> Self {
+    //     match self {
+    //         Operation::Branch(operation) => {
+    //             let mut new_operand_left = operation.0.1.clone();
+    //             let mut new_operand_right = operation.0.2.clone();
+    //             new_operand_left.mutate();
+    //             new_operand_right.mutate();
+    //             Operation::Branch((operation.0.0, new_operand_left, new_operand_right))
+            
+    //         }
+    //         _ => panic!("Not implemented"),
+    //     }
+    // }
 }
 
 //tests
@@ -350,7 +362,7 @@ mod tests {
 
     #[test]
     fn test_num_pick_operation() {
-        let DefaultEnv = DefaultEnv {};
+        let default_env = DefaultEnv {};
         let context = None;
         let operation_list = OperationList::new();
         let mut trade_list = TradeList::new();
@@ -359,7 +371,7 @@ mod tests {
             Operand::Terminal(TerminalType::NumberList(vec![1.0, 2.0, 3.0])),
         ));
         let terminal_type =
-            operation.evaluate(&operation_list, &mut trade_list, &context, &DefaultEnv);
+            operation.evaluate(&operation_list, &mut trade_list, &context, &default_env);
         assert_eq!(terminal_type, TerminalType::Number(3.0));
     }
 
@@ -537,7 +549,6 @@ mod tests {
             Operation::MarketSort((Operand::Pointer(2),)),
             Operation::Index((IndexOperator::Last, Operand::Pointer(3))),
         ];
-
         //expect index to be 6.0
         let market_index = operation_list[operation_list.len() - 1].evaluate(
             &operation_list,
